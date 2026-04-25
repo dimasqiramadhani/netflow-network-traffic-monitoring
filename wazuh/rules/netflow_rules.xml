@@ -1,0 +1,210 @@
+<!--
+  netflow_rules.xml
+  ==================
+  Wazuh Custom Rules — NetFlow Network Anomaly Detection
+  Project: Network Flow Monitoring and Anomaly Detection with Wazuh
+  Author:  Dimas Qi Ramadhani
+
+  Rule ID Range: 117000 - 117010
+
+  DEPLOYMENT:
+    sudo cp netflow_rules.xml /var/ossec/etc/rules/
+    sudo chown wazuh:wazuh /var/ossec/etc/rules/netflow_rules.xml
+    xmllint --noout /var/ossec/etc/rules/netflow_rules.xml
+    sudo systemctl restart wazuh-manager
+
+  TELEMETRY:
+    Normalized NetFlow JSON written to /var/log/netflow/netflow-wazuh.json
+    Wazuh Agent reads this file via localfile (log_format: json)
+    anomaly.tags field is populated by detect_flow_anomalies.py
+
+  FIELD REFERENCE (after JSON_Decoder):
+    data.source              - "netflow"
+    data.source.ip           - Source IP address
+    data.source.port         - Source port
+    data.destination.ip      - Destination IP address
+    data.destination.port    - Destination port (string)
+    data.flow.protocol       - TCP/UDP/ICMP
+    data.flow.direction      - internal_to_internal/internal_to_external/etc
+    data.network.bytes       - Bytes transferred
+    data.network.packets     - Packet count
+    data.event.duration      - Duration in seconds
+    data.tcp.flags           - TCP flags string
+    data.service.name        - DNS/HTTP/HTTPS/SSH/RDP/SMB/WinRM/OTHER
+    data.anomaly.tags        - List of anomaly tags from detect_flow_anomalies.py
+
+  NOTES:
+    - Thresholds in anomaly detection script should match your environment baseline
+    - These rules rely on anomaly.tags pre-computed by the Python normalizer
+    - MITRE mapping is contextual — flow anomaly ≠ confirmed compromise
+    - Correlate with endpoint, DNS, proxy, and authentication logs
+    - Validate all rules with wazuh-logtest before production deployment
+-->
+
+<group name="netflow,network_monitoring,log_management,">
+
+  <!-- ==================================================================
+       Rule 117000 — NetFlow Monitoring Base Rule
+       Level 0 — anchor rule for all NetFlow events
+  -->
+  <rule id="117000" level="0">
+    <decoded_as>netflow-json</decoded_as>
+    <field name="data.source">^netflow$</field>
+    <description>NetFlow: Network flow event received from collector</description>
+    <group>netflow,network_monitoring,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117010 — NetFlow Base Visibility Rule
+       Level 3 — low noise catch for any NetFlow event
+       Useful for dashboard visibility and threshold testing
+  -->
+  <rule id="117010" level="3">
+    <if_sid>117000</if_sid>
+    <description>NetFlow: Flow event — src=$(data.source.ip):$(data.source.port) → dst=$(data.destination.ip):$(data.destination.port) [$(data.flow.protocol)] $(data.network.bytes)B</description>
+    <group>netflow,network_monitoring,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117001 — Possible Port Scanning Activity
+       Triggered when anomaly.tags contains "possible_port_scan"
+       T1046 — Network Service Discovery
+  -->
+  <rule id="117001" level="9">
+    <if_sid>117000</if_sid>
+    <field name="data.anomaly.tags" type="pcre2">possible_port_scan</field>
+    <description>NetFlow: Possible port scanning from $(data.source.ip) — multiple destination ports detected</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>netflow,network_anomaly,port_scan,network_discovery,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117002 — High Outbound Traffic Volume
+       Triggered when anomaly.tags contains "high_outbound_bytes"
+       T1041 — Exfiltration Over C2 Channel (contextual)
+       T1567 — Exfiltration Over Web Service (contextual)
+  -->
+  <rule id="117002" level="10">
+    <if_sid>117000</if_sid>
+    <field name="data.anomaly.tags" type="pcre2">high_outbound_bytes</field>
+    <description>NetFlow: High outbound traffic volume from $(data.source.ip) — $(data.network.bytes) bytes to $(data.destination.ip)</description>
+    <mitre>
+      <id>T1041</id>
+      <id>T1567</id>
+    </mitre>
+    <group>netflow,network_anomaly,high_outbound,possible_exfiltration,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117003 — Possible Beaconing Pattern
+       Triggered when anomaly.tags contains "possible_beaconing"
+       T1071 — Application Layer Protocol
+  -->
+  <rule id="117003" level="10">
+    <if_sid>117000</if_sid>
+    <field name="data.anomaly.tags" type="pcre2">possible_beaconing</field>
+    <description>NetFlow: Possible beaconing pattern from $(data.source.ip) to $(data.destination.ip):$(data.destination.port) — repeated periodic connections</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>netflow,network_anomaly,beaconing,c2_indicator,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117004 — Possible Lateral Movement Flow
+       Internal source to internal destination on admin ports
+       T1021 — Remote Services
+  -->
+  <rule id="117004" level="10">
+    <if_sid>117000</if_sid>
+    <field name="data.flow.direction">^internal_to_internal$</field>
+    <field name="data.destination.port" type="pcre2">^(22|445|3389|5985|5986|1433|3306)$</field>
+    <description>NetFlow: Possible lateral movement — $(data.source.ip) → $(data.destination.ip):$(data.destination.port) [$(data.service.name)] on internal network</description>
+    <mitre>
+      <id>T1021</id>
+      <id>T1021.002</id>
+    </mitre>
+    <group>netflow,network_anomaly,lateral_movement,east_west,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117005 — Suspicious DNS Flow Volume
+       Triggered when anomaly.tags contains "suspicious_dns_flow"
+       T1071.004 — DNS
+  -->
+  <rule id="117005" level="8">
+    <if_sid>117000</if_sid>
+    <field name="data.anomaly.tags" type="pcre2">suspicious_dns_flow</field>
+    <description>NetFlow: Suspicious DNS flow volume from $(data.source.ip) — high UDP/53 traffic detected</description>
+    <mitre>
+      <id>T1071.004</id>
+    </mitre>
+    <group>netflow,network_anomaly,dns_anomaly,dns_tunneling_indicator,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117006 — External Inbound to Sensitive Internal Service
+       External source to internal destination on admin/database ports
+       T1021 — Remote Services (contextual)
+  -->
+  <rule id="117006" level="9">
+    <if_sid>117000</if_sid>
+    <field name="data.flow.direction">^external_to_internal$</field>
+    <field name="data.destination.port" type="pcre2">^(22|23|3389|445|5985|3306|5432|1521|27017|6379)$</field>
+    <description>NetFlow: External inbound to sensitive service — $(data.source.ip) → internal $(data.destination.ip):$(data.destination.port) [$(data.service.name)]</description>
+    <mitre>
+      <id>T1021</id>
+    </mitre>
+    <group>netflow,network_anomaly,external_inbound,exposed_service,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117007 — Internal Host Using Unusual Destination Port
+       Internal to external on non-standard ports
+       T1071 — Application Layer Protocol (contextual)
+  -->
+  <rule id="117007" level="7">
+    <if_sid>117000</if_sid>
+    <field name="data.flow.direction">^internal_to_external$</field>
+    <field name="data.destination.port" type="pcre2">^(?!(80|443|8080|8443|53|123|25|587|465|21|22|110|143|993|995|3389|1194|500|4500)$)\d+$</field>
+    <description>NetFlow: Internal host using unusual outbound port — $(data.source.ip) → $(data.destination.ip):$(data.destination.port)</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>netflow,network_anomaly,unusual_port,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117008 — Possible DoS-Like Traffic Pattern
+       High packet volume or anomaly tag
+       T1498 — Network Denial of Service
+  -->
+  <rule id="117008" level="11">
+    <if_sid>117000</if_sid>
+    <field name="data.anomaly.tags" type="pcre2">possible_dos_pattern</field>
+    <description>NetFlow: Possible DoS-like traffic pattern from $(data.source.ip) to $(data.destination.ip) — high packet rate detected</description>
+    <mitre>
+      <id>T1498</id>
+    </mitre>
+    <group>netflow,network_anomaly,dos_pattern,high_traffic,</group>
+  </rule>
+
+  <!-- ==================================================================
+       Rule 117009 — Multiple NetFlow Anomalies from Same Source
+       Frequency correlation: 3+ anomaly alerts from same source in 10 min
+  -->
+  <rule id="117009" level="13" frequency="3" timeframe="600">
+    <if_matched_sid>117001,117002,117003,117004,117005,117006,117007,117008</if_matched_sid>
+    <same_field>data.source.ip</same_field>
+    <description>NetFlow: ESCALATE — Multiple network anomalies from $(data.source.ip) within 10 minutes — investigate immediately</description>
+    <mitre>
+      <id>T1046</id>
+      <id>T1021</id>
+      <id>T1071</id>
+    </mitre>
+    <group>netflow,network_anomaly,correlation,escalation,</group>
+  </rule>
+
+</group>

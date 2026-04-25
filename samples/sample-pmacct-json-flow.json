@@ -1,0 +1,3 @@
+{"ip_src":"192.168.56.10","ip_dst":"203.0.113.50","port_src":52341,"port_dst":443,"ip_proto":"6","packets":42,"bytes":48291,"timestamp_start":"2026-04-25T10:00:01Z","timestamp_end":"2026-04-25T10:00:13Z","tcpflags":"27"}
+{"ip_src":"192.168.56.50","ip_dst":"8.8.8.8","port_src":54321,"port_dst":53,"ip_proto":"17","packets":1,"bytes":82,"timestamp_start":"2026-04-25T10:00:06Z","timestamp_end":"2026-04-25T10:00:06Z","tcpflags":"0"}
+{"ip_src":"192.168.56.10","ip_dst":"203.0.113.99","port_src":55000,"port_dst":443,"ip_proto":"6","packets":420,"bytes":52428800,"timestamp_start":"2026-04-25T10:00:07Z","timestamp_end":"2026-04-25T10:00:52Z","tcpflags":"27"}

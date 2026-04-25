@@ -1,0 +1,20 @@
+{
+  "_comment": "DUMMY DATA — Sample Wazuh alert for rule 117003 (beaconing pattern)",
+  "timestamp": "2026-04-25T10:25:00.000+0000",
+  "rule": {
+    "id": "117003", "level": 10,
+    "description": "NetFlow: Possible beaconing pattern from 192.168.56.30 to 203.0.113.99:443 — repeated periodic connections",
+    "groups": ["netflow", "network_anomaly", "beaconing", "c2_indicator"],
+    "mitre": {"id": ["T1071"]}
+  },
+  "agent": {"id": "007", "name": "lab-collector-01"},
+  "data": {
+    "source": "netflow", "source.ip": "192.168.56.30",
+    "destination.ip": "203.0.113.99", "destination.port": "443",
+    "flow.protocol": "TCP", "flow.direction": "internal_to_external",
+    "network.bytes": 512, "network.packets": 4,
+    "event.duration": 1.2, "service.name": "HTTPS",
+    "anomaly.tags": ["possible_beaconing"]
+  },
+  "analyst_notes": "8 connections to same destination every ~5 minutes with consistent byte count (~500 bytes). Classic C2 check-in pattern. Investigate: check endpoint 192.168.56.30 for suspicious processes, check DNS for 203.0.113.99 resolution history."
+}

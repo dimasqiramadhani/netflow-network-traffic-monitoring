@@ -1,0 +1,62 @@
+<!--
+  netflow_decoders.xml
+  ======================
+  Wazuh Custom Decoder — NetFlow Normalized JSON Log Parsing
+  Project: Network Flow Monitoring and Anomaly Detection with Wazuh
+  Author:  Dimas Qi Ramadhani
+
+  DEPLOYMENT:
+    sudo cp netflow_decoders.xml /var/ossec/etc/decoders/
+    sudo chown wazuh:wazuh /var/ossec/etc/decoders/netflow_decoders.xml
+    xmllint --noout /var/ossec/etc/decoders/netflow_decoders.xml
+    sudo systemctl restart wazuh-manager
+
+  LOG FORMAT EXPECTED:
+    Wazuh Agent reads /var/log/netflow/netflow-wazuh.json via localfile (log_format: json)
+    Each line is a single JSON object produced by normalize_netflow_to_wazuh.py
+
+    Example line:
+    {"@timestamp":"2026-04-25T10:00:00Z","source":"netflow","source.ip":"192.168.56.10",
+     "destination.ip":"203.0.113.50","destination.port":"443","flow.protocol":"TCP",
+     "network.bytes":48291,"network.packets":42,"event.duration":12.4,
+     "flow.direction":"internal_to_external","service.name":"HTTPS",
+     "anomaly.tags":["high_outbound_bytes"]}
+
+  FIELD MAPPING AFTER JSON_Decoder:
+    data.source              → always "netflow"
+    data.source.ip           → source IP address
+    data.source.port         → source port
+    data.destination.ip      → destination IP
+    data.destination.port    → destination port (string for rule matching)
+    data.flow.protocol       → TCP/UDP/ICMP
+    data.flow.direction      → internal_to_external / internal_to_internal / etc
+    data.network.bytes       → bytes transferred (integer)
+    data.network.packets     → packet count (integer)
+    data.event.duration      → duration in seconds (float)
+    data.tcp.flags           → TCP flags string
+    data.service.name        → DNS/HTTP/HTTPS/SSH/RDP/SMB/WinRM/OTHER
+    data.anomaly.tags        → array of anomaly tag strings
+    data.collector.name      → collector hostname
+    data.exporter.ip         → NetFlow exporter IP
+
+  NOTES:
+    - log_format: json in localfile allows Wazuh to natively decode JSON fields
+    - The parent decoder matches on data.source = "netflow" for targeted decoding
+    - JSON_Decoder automatically maps all top-level JSON keys to data.* fields
+    - Array fields (anomaly.tags) are decoded as strings — rules match with pcre2
+    - All numeric comparisons on data fields use pcre2 in this version
+-->
+
+<!-- Parent decoder: identifies NetFlow JSON events by source field -->
+<decoder name="netflow-json">
+  <type>json</type>
+  <prematch>{"@timestamp"</prematch>
+</decoder>
+
+<!-- Child decoder: refines to NetFlow source and uses JSON_Decoder for full extraction -->
+<decoder name="netflow-json-fields">
+  <parent>netflow-json</parent>
+  <use_own_name>true</use_own_name>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+  <!-- JSON_Decoder extracts all JSON keys into data.* fields automatically -->
+</decoder>

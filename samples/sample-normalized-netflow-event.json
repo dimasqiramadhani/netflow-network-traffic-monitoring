@@ -1,0 +1,23 @@
+{
+  "_comment": "DUMMY DATA — Sample normalized NetFlow JSON event output from normalize_netflow_to_wazuh.py",
+  "@timestamp": "2026-04-25T10:00:01Z",
+  "source": "netflow",
+  "collector.name": "lab-collector-01",
+  "exporter.ip": "192.168.56.1",
+  "flow.protocol": "TCP",
+  "source.ip": "192.168.56.10",
+  "source.port": "52341",
+  "destination.ip": "203.0.113.50",
+  "destination.port": "443",
+  "network.bytes": 48291,
+  "network.packets": 42,
+  "event.duration": 12.45,
+  "tcp.flags": "SYN,ACK,FIN",
+  "flow.direction": "internal_to_external",
+  "internal.src": true,
+  "internal.dst": false,
+  "service.name": "HTTPS",
+  "event.type": "network",
+  "event.category": "network_traffic",
+  "anomaly.tags": []
+}

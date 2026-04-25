@@ -1,0 +1,34 @@
+<!--
+  agent-group-netflow-snippet.xml
+  ===================================
+  Wazuh Agent Group — NetFlow Collector Group Configuration
+  Author: Dimas Qi Ramadhani
+
+  USAGE:
+    For centralized configuration, assign NetFlow collector hosts
+    to a Wazuh agent group (e.g., "netflow_collectors").
+
+    1. Create agent group in Wazuh Manager:
+       sudo /var/ossec/bin/agent_groups -a -g netflow_collectors
+
+    2. Place this file at:
+       /var/ossec/etc/shared/netflow_collectors/agent.conf
+
+    3. Assign agent to group:
+       sudo /var/ossec/bin/agent_groups -a -i <agent_id> -g netflow_collectors
+
+    The agent will then automatically pull this configuration.
+
+  NOTES:
+    - This allows managing all NetFlow collector agents from one place
+    - Suitable if multiple Linux hosts collect NetFlow from different segments
+    - Ensure each host has /var/log/netflow/netflow-wazuh.json writable by normalizer
+-->
+
+<agent_config>
+  <!-- NetFlow normalized JSON log collection -->
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/netflow/netflow-wazuh.json</location>
+  </localfile>
+</agent_config>

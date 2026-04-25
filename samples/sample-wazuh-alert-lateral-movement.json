@@ -1,0 +1,20 @@
+{
+  "_comment": "DUMMY DATA — Sample Wazuh alert for rule 117004 (lateral movement flow)",
+  "timestamp": "2026-04-25T10:05:00.000+0000",
+  "rule": {
+    "id": "117004", "level": 10,
+    "description": "NetFlow: Possible lateral movement — 192.168.56.10 → 192.168.56.40:445 [SMB] on internal network",
+    "groups": ["netflow", "network_anomaly", "lateral_movement", "east_west"],
+    "mitre": {"id": ["T1021", "T1021.002"]}
+  },
+  "agent": {"id": "007", "name": "lab-collector-01"},
+  "data": {
+    "source": "netflow", "source.ip": "192.168.56.10",
+    "destination.ip": "192.168.56.40", "destination.port": "445",
+    "flow.protocol": "TCP", "flow.direction": "internal_to_internal",
+    "network.bytes": 4096, "network.packets": 20,
+    "event.duration": 2.5, "service.name": "SMB",
+    "anomaly.tags": ["possible_lateral_movement"]
+  },
+  "analyst_notes": "Internal SMB connection. Correlate with Windows Security Event 4624/4625 on destination host. Was there an auth attempt? Check 192.168.56.10 endpoint for process tree around this time."
+}
