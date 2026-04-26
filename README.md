@@ -470,7 +470,4 @@ Lab and portfolio use only. All IP addresses, hostnames, and flow data are ficti
 
 ## 👤 Author
 
-**Dimas Qi Ramadhani** — Cybersecurity Engineer | Network Security · SIEM · Detection Engineering  
-GitHub: [@dimasqiramadhani](https://github.com/dimasqiramadhani)  
-Email: dimasqiramadhani@gmail.com  
-LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)
+**Dimasqi Ramadhani** · Security Engineer  
