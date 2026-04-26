@@ -26,6 +26,8 @@ NetFlow doesn't capture packet payloads — it captures **communication metadata
 
 ## 🧪 Lab Overview
 
+![Architecture Diagram](screenshots/Architecture.png "Architecture Diagram")
+
 | Component | Role |
 |-----------|------|
 | pmacctd | Captures flow records directly from network interface (primary collector) |
