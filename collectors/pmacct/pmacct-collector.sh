@@ -10,7 +10,7 @@ INTERFACE="${NETFLOW_INTERFACE:-enp1s0}"
 OUTPUT_FILE="${NETFLOW_RAW_OUTPUT:-/var/log/netflow/netflow-raw.json}"
 FLUSH_INTERVAL="${NETFLOW_FLUSH_INTERVAL:-60}"
 
-# Detect interface if not set
+# Auto-detect interface if the configured one is not found
 if ! ip link show "$INTERFACE" &>/dev/null; then
     echo "⚠️  Interface $INTERFACE not found. Detecting..."
     INTERFACE=$(ip route | grep default | awk '{print $5}' | head -1)
@@ -35,7 +35,7 @@ echo "✅ pmacctd started"
 echo "   Verify: ps aux | grep pmacctd"
 echo "   Wait ${FLUSH_INTERVAL}s then check: cat $OUTPUT_FILE | head -3"
 echo ""
-echo "   Next: run normalizer"
+echo "   Next: run the normalizer"
 echo "   python3 scripts/normalize_netflow_to_wazuh.py \\"
 echo "     --pmacct $OUTPUT_FILE \\"
 echo "     --output /var/log/netflow/netflow-wazuh.json"

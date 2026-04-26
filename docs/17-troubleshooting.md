@@ -15,47 +15,31 @@ sudo iptables -L -n | grep 2055
 echo "test" | nc -u <collector-ip> 2055
 ```
 
-## nfcapd Not Creating Files
-
-```bash
-# Check nfcapd is running
-ps aux | grep nfcapd
-
-# Verify directory exists and is writable
-ls -la /var/cache/nfdump/
-
-# Run nfcapd in foreground verbose mode
-sudo nfcapd -D -l /var/cache/nfdump/ -p 2055 -v
-```
-
-## nfdump Not Reading Flow Files
-
-```bash
-# List files in flow directory
-ls -la /var/cache/nfdump/
-
-# Check file format
-nfdump -r /var/cache/nfdump/<file> -c 10
-```
-
 ## pmacct JSON Output Empty
 
 ```bash
-# Check nfacctd process
-ps aux | grep nfacctd
+# Check pmacctd process
+ps aux | grep pmacctd
 
 # Check output file
-tail -20 /var/log/netflow/pmacct-flows.json
+tail -20 /var/log/netflow/netflow-raw.json
 
-# Check nfacctd logs for errors
-journalctl -u nfacctd --since "1 hour ago"
+# Check logs for errors
+journalctl -u pmacctd --since "1 hour ago"
 ```
 
 ## Normalizer Failing
 
 ```bash
-# Test normalizer manually
-python3 scripts/normalize_netflow_to_wazuh.py < samples/sample-nfdump-output.txt | head -5 | python3 -m json.tool
+# Test normalizer manually with a sample pmacct record
+echo '{"ip_src":"1.1.1.1","ip_dst":"2.2.2.2","port_src":1234,"port_dst":443,"ip_proto":"tcp","packets":1,"bytes":100}' \
+  > /tmp/test-pmacct.json
+
+python3 scripts/normalize_netflow_to_wazuh.py \
+  --pmacct /tmp/test-pmacct.json \
+  --output /tmp/test-out.json
+
+cat /tmp/test-out.json | python3 -m json.tool
 ```
 
 ## Wazuh Agent Not Reading Log File
@@ -65,7 +49,7 @@ python3 scripts/normalize_netflow_to_wazuh.py < samples/sample-nfdump-output.txt
 ls -la /var/log/netflow/netflow-wazuh.json
 tail -5 /var/log/netflow/netflow-wazuh.json | python3 -m json.tool
 
-# Check permissions (Wazuh agent runs as wazuh)
+# Fix permissions (Wazuh agent needs read access)
 sudo chmod 644 /var/log/netflow/netflow-wazuh.json
 ```
 
@@ -73,32 +57,35 @@ sudo chmod 644 /var/log/netflow/netflow-wazuh.json
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
-# Paste a normalized flow event
-# Expect: Phase 2 decoder = netflow-json
+# Paste a normalized flow event (single JSON line from netflow-wazuh.json)
+# Expected Phase 2: name='json', netflow='true'
 
-# Also validate XML
+# Validate XML syntax
 xmllint --noout /var/ossec/etc/decoders/netflow_decoders.xml
 ```
 
 ## Flow Direction Incorrect
 
-Check `INTERNAL_NETWORKS` in your `.env` — if the internal network definition is wrong, all flows will show incorrect direction. Example:
+Check `INTERNAL_NETWORKS` in your `.env` — if the internal network definition does not match your actual lab subnet, all flows will show incorrect direction.
 
-```
-# If lab is 192.168.56.0/24 but you set 10.0.0.0/8:
-INTERNAL_NETWORKS=192.168.56.0/24,10.10.10.0/24
+```bash
+# Check actual VM IP and subnet
+ip a | grep "inet " | grep -v 127
+
+# Update .env accordingly
+echo 'INTERNAL_NETWORKS=160.22.250.0/23' > .env
 ```
 
 ## Too Many Alerts / Too Noisy
 
-- Increase `PORTSCAN_UNIQUE_PORT_THRESHOLD` for port scan rule (default: 20)
-- Increase `EXTERNAL_TRAFFIC_THRESHOLD_BYTES` for high outbound rule
+- Increase `PORTSCAN_UNIQUE_PORT_THRESHOLD` (default: 20) to reduce port scan sensitivity
+- Increase `EXTERNAL_TRAFFIC_THRESHOLD_BYTES` to raise the high outbound threshold
 - Add known scanner IPs to an allowlist in the normalizer
-- Reduce rule level from 9 to 6 for frequent FP rules
+- Reduce rule level from 9 to 6 for frequent false-positive rules
 
 ## Timezone Mismatch
 
-Ensure collector host, exporter, and Wazuh all use UTC or the same timezone. Check:
+Ensure the collector host, exporter, and Wazuh all use UTC or the same timezone:
 
 ```bash
 timedatectl
@@ -107,58 +94,58 @@ date -u
 
 ---
 
-## Wazuh Manager Gagal Start Setelah Deploy Decoder
+## Wazuh Manager Fails to Start After Deploying Decoder
 
-**Gejala:**
+**Symptom:**
 ```
 wazuh-analysisd: ERROR: Invalid decoder type 'json'
 wazuh-analysisd: CRITICAL: (1202): Configuration error at 'etc/decoders/netflow_decoders.xml'
 ```
 
-**Penyebab:** `<type>json</type>` tidak valid di Wazuh v4.x.
+**Cause:** `<type>json</type>` is not valid in Wazuh v4.x.
 
-**Fix:** Pastikan menggunakan `netflow_decoders.xml` versi terbaru — tag `<type>json</type>` sudah dihapus. JSON parsing di-handle oleh `log_format: json` di ossec.conf agent, bukan di decoder.
+**Fix:** Ensure you are using the latest `netflow_decoders.xml` — the `<type>json</type>` tag has been removed. JSON parsing is handled by `log_format: json` in the agent's ossec.conf localfile config, not in the decoder.
 
 ```bash
-# Verifikasi decoder tidak ada type tag
+# Verify decoder has no type tag
 grep "type" /var/ossec/etc/decoders/netflow_decoders.xml
-# Seharusnya tidak ada output
+# Should return no output
 
 sudo systemctl restart wazuh-manager
 ```
 
 ---
 
-## Alert Muncul Tapi rule.id Hanya 117010, Tidak Ada 117001-117008
+## Alerts Appear but rule.id is Only 117010 (No 117001-117008)
 
-**Gejala:** Event netflow masuk ke dashboard tapi hanya rule 117010 (base visibility) yang fired.
+**Symptom:** NetFlow events appear in the dashboard but only rule 117010 (base visibility) fires.
 
-**Penyebab:** Rules 117001-117008 menggunakan field `data.anomaly.tags`, `data.flow.direction`, dll. Tapi dengan `log_format: json`, field aktual adalah tanpa prefix `data.` — yaitu `anomaly.tags`, `flow.direction`, dll.
+**Cause:** Rules 117001-117008 used `data.anomaly.tags`, `data.flow.direction`, etc. With `log_format: json`, the actual field names are without the `data.` prefix — e.g. `anomaly.tags`, `flow.direction`.
 
-**Fix:** Pastikan menggunakan `netflow_rules.xml` versi terbaru yang sudah menghapus prefix `data.` dari semua field name.
+**Fix:** Ensure you are using the latest `netflow_rules.xml` which removes the `data.` prefix from all field names.
 
 ```bash
-# Verifikasi rules tidak ada data. prefix
+# Verify no data. prefix in rules
 grep "data\." /var/ossec/etc/rules/netflow_rules.xml
-# Seharusnya tidak ada output
+# Should return no output
 
 sudo systemctl restart wazuh-manager
 
-# Test dengan wazuh-logtest
+# Test with wazuh-logtest
 sudo /var/ossec/bin/wazuh-logtest
-# Paste event dengan anomaly.tags berisi possible_port_scan
-# Phase 3 harus menampilkan rule id: '117001'
+# Paste event with anomaly.tags containing possible_port_scan
+# Phase 3 should show rule id: '117001'
 ```
 
 ---
 
-## field flow.protocol Berisi PROTOtcp Bukan TCP
+## flow.protocol Shows PROTOtcp Instead of TCP
 
-**Gejala:** Di Wazuh Dashboard, field `flow.protocol` menampilkan `PROTOtcp`, `PROTOudp`, dll.
+**Symptom:** In Wazuh Dashboard, `flow.protocol` shows `PROTOtcp`, `PROTOudp`, etc.
 
-**Penyebab:** pmacctd output `ip_proto` sebagai string nama protokol (`"tcp"`, `"udp"`, `"igmp"`), bukan angka (`"6"`, `"17"`). Normalizer versi lama hanya handle angka.
+**Cause:** pmacctd outputs `ip_proto` as a string protocol name (`"tcp"`, `"udp"`, `"igmp"`), not a number (`"6"`, `"17"`). The old normalizer only handled numeric values.
 
-**Fix:** Pastikan menggunakan `normalize_netflow_to_wazuh.py` versi terbaru yang sudah handle kedua format.
+**Fix:** Use the latest `normalize_netflow_to_wazuh.py` which handles both string and numeric protocol formats.
 
 ```bash
 # Test normalizer
@@ -166,87 +153,86 @@ echo '{"ip_src":"1.1.1.1","ip_dst":"2.2.2.2","port_src":1234,"port_dst":443,"ip_
   > /tmp/test-pmacct.json
 
 python3 scripts/normalize_netflow_to_wazuh.py \
-  --pmacct /tmp/test-pmacct.json \
-  --output /tmp/test-out.json
+  --pmacct /tmp/test-pmacct.json --output /tmp/test-out.json
 
-cat /tmp/test-out.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flow.protocol'])"
-# Harus output: TCP
+python3 -c "import json; d=json.load(open('/tmp/test-out.json')); print(d['flow']['protocol'])"
+# Expected output: TCP
 ```
 
 ---
 
 ## softflowd / nfcapd: "No matched flows"
 
-**Gejala:** nfcapd jalan, softflowd jalan, tapi `nfdump -R /var/cache/nfdump/` selalu "No matched flows".
+**Symptom:** nfcapd is running, softflowd is running, but `nfdump -R /var/cache/nfdump/` always returns "No matched flows".
 
-**Penyebab:** Di cloud VM environment (OpenStack, AWS, GCP, dll), traffic diproses di level hypervisor sebelum sampai ke interface. softflowd menggunakan libpcap yang tidak bisa capture byte/packet counters dengan benar — hasilnya flow records kosong.
+**Cause:** In cloud VM environments (OpenStack, AWS, GCP, etc.), traffic is processed at the hypervisor level before reaching the interface. softflowd uses libpcap and cannot correctly capture byte/packet counters — resulting in empty flow records.
 
-**Fix:** Gunakan pmacctd sebagai collector, bukan nfcapd/softflowd:
+**Fix:** Use pmacctd as the collector instead of nfcapd/softflowd:
 
 ```bash
 sudo pkill nfcapd
 sudo pkill softflowd
 
-# Cek nama interface
+# Check interface name
 ip a
 
-# Jalankan pmacctd langsung dari interface
+# Start pmacctd directly from interface
 sudo pmacctd -i enp1s0 \
   -c src_host,dst_host,src_port,dst_port,proto \
   -P print -O json \
   -o /var/log/netflow/netflow-raw.json \
   -r 60 -D
 
-# Tunggu 65 detik, verifikasi
+# Wait 65 seconds then verify
 cat /var/log/netflow/netflow-raw.json | head -3
 ```
 
-Atau gunakan script yang sudah tersedia:
+Or use the provided script:
 ```bash
 bash collectors/pmacct/pmacct-collector.sh
 ```
 
 ---
 
-## Localfile Duplikat di ossec.conf
+## Localfile Duplicate in ossec.conf
 
-**Gejala:**
+**Symptom:**
 ```
 WARNING: (1958): Log file '/var/log/netflow/netflow-wazuh.json' is duplicated.
 ```
 
-**Penyebab:** Entry localfile netflow ditambahkan dua kali ke ossec.conf (bisa terjadi jika menjalankan penambahan config lebih dari sekali).
+**Cause:** The localfile entry was added more than once to ossec.conf.
 
 **Fix:**
 ```bash
-# Cek duplikat
+# Check for duplicates
 grep -n "netflow" /var/ossec/etc/ossec.conf
 
-# Edit manual, hapus salah satu blok
+# Edit manually and remove one of the duplicate blocks
 sudo nano /var/ossec/etc/ossec.conf
 
-# Pastikan hanya satu entry
+# Confirm only one entry remains
 grep -c "netflow-wazuh.json" /var/ossec/etc/ossec.conf
-# Harus output: 1
+# Expected output: 1
 
 sudo systemctl restart wazuh-agent
 ```
 
 ---
 
-## Custom Decoder Tidak Match (Phase 2 menampilkan name: 'json' bukan 'netflow-json')
+## Custom Decoder Shows name: 'json' Instead of 'netflow-json' in Phase 2
 
-**Ini normal dan expected.** Dengan `log_format: json` di localfile, Wazuh menggunakan built-in json decoder secara otomatis. Custom decoder `netflow-json` hanya digunakan sebagai anchor untuk rule 117000 (`<decoded_as>json</decoded_as>`). Yang penting di wazuh-logtest adalah Phase 3 menampilkan rule yang benar, bukan nama decoder-nya.
+**This is normal and expected.** With `log_format: json` in localfile config, Wazuh automatically uses the built-in json decoder. The custom decoder `netflow-json` is used only as an anchor for rule 117000 (`<decoded_as>json</decoded_as>`). What matters is that Phase 3 shows the correct rule — not the decoder name.
 
 ---
 
-## wazuh-logtest: Input yang Benar
+## Correct Input Format for wazuh-logtest
 
-**Gejala:** wazuh-logtest tidak match decoder / Phase 3 tidak muncul padahal rules sudah benar.
+**Symptom:** wazuh-logtest does not match decoder or Phase 3 does not appear despite correct rules.
 
-**Penyebab:** Input yang di-paste bukan format yang benar. wazuh-logtest menerima **satu baris raw JSON event** (output normalizer), bukan format Wazuh alert JSON.
+**Cause:** The pasted input is not in the correct format. wazuh-logtest accepts **a single raw JSON line** (normalizer output), not the Wazuh alert JSON format.
 
-**Input yang SALAH** (ini format Wazuh alert, bukan input logtest):
+**Wrong input** (this is a Wazuh alert, not logtest input):
 ```json
 {
   "rule": {"id": "117001"},
@@ -255,67 +241,67 @@ sudo systemctl restart wazuh-agent
 }
 ```
 
-**Input yang BENAR** (satu baris output normalizer):
+**Correct input** (single line from normalizer output):
 ```bash
-# Generate dulu dengan:
+# Generate with:
 python3 scripts/generate_safe_netflow_test_events.py --scenario port_scan --count 1
 
-# Output-nya yang di-paste ke wazuh-logtest, contoh:
-{"@timestamp": "2026-04-26T11:45:20Z", "source": "netflow", "collector.name": "lab-collector-01", "exporter.ip": "192.168.56.1", "flow.protocol": "TCP", "source.ip": "192.168.56.30", "source.port": "48739", "destination.ip": "192.168.56.28", "destination.port": "47775", "network.bytes": 60, "network.packets": 1, "event.duration": 0.001, "tcp.flags": "SYN", "flow.direction": "internal_to_internal", "internal.src": true, "internal.dst": true, "service.name": "OTHER", "event.type": "network", "event.category": "network_traffic", "anomaly.tags": ["possible_port_scan"]}
+# Paste the output line into wazuh-logtest, example:
+{"@timestamp": "2026-04-26T11:45:20Z", "netflow": "true", "source": {"ip": "192.168.56.30", "port": 48739}, "destination": {"ip": "192.168.56.28", "port": 47775}, "flow": {"protocol": "TCP", "direction": "internal_to_internal"}, "network": {"bytes": 60, "packets": 1}, "anomaly": {"tags": ["possible_port_scan"]}}
 ```
 
 ---
 
-## Testing: generate_safe_netflow_test_events.py Tidak Menghasilkan Alert
+## generate_safe_netflow_test_events.py Produces No Alerts
 
-**Gejala:** Generate test events berhasil tapi tidak ada alert 117001-117005 di dashboard.
+**Symptom:** Test event generation succeeds but no 117001-117005 alerts appear in dashboard.
 
-**Penyebab paling umum:** Cron normalizer masih aktif dan overwrite file setiap menit sebelum Wazuh Agent sempat membaca seluruh events.
+**Most common cause:** The cron normalizer is still active and overwrites the file every minute before Wazuh Agent can read all the events.
 
 **Fix:**
 ```bash
-# 1. Pause cron dulu
-sudo crontab -e  # tambahkan # di depan baris normalizer
+# 1. Pause cron first
+sudo crontab -e  # add # at the start of the normalizer line
 
 # 2. Generate test events
 python3 scripts/generate_safe_netflow_test_events.py \
   --scenario all \
   --output /var/log/netflow/netflow-wazuh.json
 
-# 3. Tunggu 30 detik untuk Wazuh Agent pickup
+# 3. Wait 30 seconds for Wazuh Agent to pick up the file
 
-# 4. Verifikasi alert di VM 1
+# 4. Check alerts on VM 1
 sudo grep -E '"id":"11700[1-9]"' /var/ossec/logs/alerts/alerts.json | tail -5
 
-# 5. Aktifkan kembali cron setelah testing
-sudo crontab -e  # hapus tanda #
+# 5. Re-enable cron after testing
+sudo crontab -e  # remove the #
 ```
 
 ---
 
-## source.ip / destination.ip Tidak Muncul di Wazuh Dashboard
+## source.ip / destination.ip Missing in Wazuh Dashboard
 
-**Gejala:** Di Wazuh Dashboard, field `source.ip` tidak muncul atau kosong meskipun event masuk.
+**Symptom:** `source.ip` field does not appear or is empty in Wazuh Dashboard despite events being ingested.
 
-**Penyebab:** Format JSON lama menggunakan flat dot-notation key seperti `"source.ip": "x.x.x.x"`. Wazuh JSON_Decoder memperlakukan titik sebagai pemisah nested object. Karena `"source"` juga dipakai sebagai string `"netflow"`, terjadi konflik — Wazuh tidak bisa decode `source` sebagai string sekaligus sebagai parent object dari `.ip`.
+**Cause:** The old normalizer used flat dot-notation keys like `"source.ip": "x.x.x.x"`. Wazuh JSON_Decoder treats dots as nested object separators. Since `"source"` was also used as the string `"netflow"`, a conflict occurred — Wazuh could not decode `source` as both a string and a nested object parent.
 
-**Fix:** Normalizer versi terbaru sudah menggunakan nested JSON:
+**Fix:** The latest normalizer uses proper nested JSON:
 
 ```json
 {
-  "source": {"ip": "192.168.56.10", "port": "52341"},
-  "destination": {"ip": "8.8.8.8", "port": "443"},
+  "source": {"ip": "192.168.56.10", "port": 52341},
+  "destination": {"ip": "8.8.8.8", "port": 443},
   "flow": {"protocol": "TCP", "direction": "internal_to_external"}
 }
 ```
 
-Dengan struktur ini, field di Wazuh Dashboard muncul sebagai:
-- `data.source.ip` → IP sumber
-- `data.destination.ip` → IP tujuan
-- `data.flow.protocol` → protokol
+With this structure, fields appear in Wazuh Dashboard as:
+- `data.source.ip` → source IP
+- `data.destination.ip` → destination IP
+- `data.flow.protocol` → protocol
 - `data.anomaly.tags` → anomaly tags
 
-Pastikan menggunakan `normalize_netflow_to_wazuh.py` versi terbaru, lalu regenerate `netflow-wazuh.json`:
+Use the latest `normalize_netflow_to_wazuh.py` and regenerate `netflow-wazuh.json`:
 
 ```bash
 rm -f /var/log/netflow/netflow-wazuh.json
@@ -323,27 +309,28 @@ python3 scripts/normalize_netflow_to_wazuh.py \
   --pmacct /var/log/netflow/netflow-raw.json \
   --output /var/log/netflow/netflow-wazuh.json
 
-# Verifikasi format nested
+# Verify nested format
 head -1 /var/log/netflow/netflow-wazuh.json | python3 -m json.tool | grep -A2 '"source"'
-# Harus output:
+# Expected:
 # "source": {
 #     "ip": "x.x.x.x",
 ```
 
 ---
 
-## data.network.bytes Tidak Bisa Di-aggregate (Sum) di Dashboard
+## data.network.bytes Not Available for Sum Aggregation in Dashboard
 
-**Gejala:** Field `data.network.bytes` tidak muncul di dropdown aggregation Sum di Visualize,
-atau muncul tapi tidak bisa dipilih untuk Sum/Avg.
+**Symptom:** `data.network.bytes` does not appear in the aggregation Sum dropdown in Visualize, or appears but cannot be selected for Sum/Avg.
 
-**Penyebab:** Wazuh Indexer menyimpan field sebagai tipe `keyword` (string) bukan `long` (number).
-Field numeric perlu di-define di index template sebelum data masuk.
+**Cause:** Wazuh Indexer stores the field as type `keyword` (string) instead of `long` (number). Numeric fields must be defined in an index template before data is ingested.
 
-**Fix — Apply index template (jalankan di VM 1):**
+**Fix — Apply index template (run on VM 1):**
 
 ```bash
-curl -k -u admin:<password>   -X PUT "https://localhost:9200/_index_template/wazuh-netflow-numeric"   -H "Content-Type: application/json"   -d '{
+curl -k -u admin:<password> \
+  -X PUT "https://localhost:9200/_index_template/wazuh-netflow-numeric" \
+  -H "Content-Type: application/json" \
+  -d '{
     "index_patterns": ["wazuh-alerts-*"],
     "priority": 200,
     "template": {
@@ -357,33 +344,30 @@ curl -k -u admin:<password>   -X PUT "https://localhost:9200/_index_template/waz
   }'
 ```
 
-Template ini berlaku untuk **index baru** yang dibuat setelah template di-apply (besok dan seterusnya).
-Index hari ini tidak bisa diubah.
+This template applies to **new indexes** created after this point. Existing indexes cannot be changed.
 
-Setelah index baru terbentuk:
+After a new index is created:
 1. **Stack Management → Index Patterns → wazuh-alerts-* → Refresh field list**
-2. Coba lagi Sum aggregation pada `data.network.bytes`
+2. Try Sum aggregation on `data.network.bytes` again
 
 ---
 
-## flow.direction Selalu external_to_external pada Traffic Nyata
+## All Traffic Shows external_to_external on Real Traffic
 
-**Gejala:** Semua traffic dari pmacctd ter-klasifikasi sebagai `external_to_external`,
-rule 117004 tidak pernah fired.
+**Symptom:** All traffic from pmacctd is classified as `external_to_external`, rule 117004 never fires.
 
-**Penyebab:** `INTERNAL_NETWORKS` di normalizer masih menggunakan default `192.168.56.0/24`
-tapi IP aktual VM lo berada di subnet yang berbeda (misalnya `160.22.250.0/23`).
+**Cause:** `INTERNAL_NETWORKS` in the normalizer still uses the default `192.168.56.0/24` but the actual VM IP is on a different subnet (e.g. `160.22.250.0/23`).
 
 **Fix:**
 
 ```bash
-# Cek subnet IP VM lo
+# Check your VM subnet
 ip a | grep "inet " | grep -v 127
 
-# Set environment variable sebelum jalankan normalizer
+# Set environment variable before running normalizer
 export INTERNAL_NETWORKS="160.22.250.0/23"
 
-# Atau tambahkan ke .env di folder project
+# Or add to .env file in project folder
 echo 'INTERNAL_NETWORKS=160.22.250.0/23' >> .env
 
 # Regenerate netflow-wazuh.json
@@ -392,15 +376,15 @@ python3 scripts/normalize_netflow_to_wazuh.py \
   --pmacct /var/log/netflow/netflow-raw.json \
   --output /var/log/netflow/netflow-wazuh.json
 
-# Verifikasi flow.direction sudah benar
+# Verify flow.direction is correct
 head -5 /var/log/netflow/netflow-wazuh.json | \
   python3 -c "import sys,json; [print(json.loads(l)['flow']['direction']) for l in sys.stdin]"
 ```
 
-Juga update cron supaya env var ikut terbawa:
+Also update cron to pass the environment variable:
 
 ```bash
 sudo crontab -e
-# Ubah baris cron menjadi:
+# Update the cron line to:
 # * * * * * INTERNAL_NETWORKS=160.22.250.0/23 rm -f /var/log/netflow/netflow-wazuh.json && python3 /path/to/normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/netflow-raw.json --output /var/log/netflow/netflow-wazuh.json
 ```

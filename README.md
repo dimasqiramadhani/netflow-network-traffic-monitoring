@@ -148,19 +148,19 @@ sudo systemctl enable wazuh-agent && sudo systemctl start wazuh-agent
 sudo bash scripts/install_netflow_tools.sh
 ```
 
-#### Step 3 — Jalankan pmacctd
+#### Step 3 — Start pmacctd
 
-Cek nama interface:
+Check interface name first:
 
 ```bash
-ip a  # catat nama interface, contoh: enp1s0, eth0
+ip a  # note the interface name, e.g.: enp1s0, eth0
 ```
 
-Jalankan collector:
+Start collector:
 
 ```bash
 bash collectors/pmacct/pmacct-collector.sh
-# atau manual:
+# or manually:
 sudo pmacctd -i enp1s0 \
   -c src_host,dst_host,src_port,dst_port,proto \
   -P print -O json \
@@ -168,37 +168,37 @@ sudo pmacctd -i enp1s0 \
   -r 60 -D
 ```
 
-Tunggu 65 detik, verifikasi:
+Wait 65 seconds, then verify:
 
 ```bash
 cat /var/log/netflow/netflow-raw.json | head -3
-# Harus muncul JSON dengan ip_src, ip_dst, ip_proto, packets, bytes
+# Expected: JSON lines with ip_src, ip_dst, ip_proto, packets, bytes
 ```
 
-#### Step 4 — Konfigurasi INTERNAL_NETWORKS
+#### Step 4 — Configure INTERNAL_NETWORKS
 
-Normalizer menggunakan `INTERNAL_NETWORKS` untuk menentukan `flow.direction`.
-Sesuaikan dengan subnet IP lab lo — cek IP VM 2 dengan `ip a`.
+The normalizer uses `INTERNAL_NETWORKS` to determine `flow.direction`.
+Set it to match your lab subnet — check your VM 2 IP with `ip a`.
 
 ```bash
-# Cek IP aktual VM 2
+# Check actual VM 2 IP
 ip a | grep "inet " | grep -v "127.0.0"
-# Contoh output: inet 160.22.251.111/23
+# Example output: inet 160.22.251.111/23
 
-# Set INTERNAL_NETWORKS sesuai subnet — contoh jika IP 160.22.x.x/23
+# Set INTERNAL_NETWORKS to match your subnet
 export INTERNAL_NETWORKS="160.22.250.0/23,192.168.56.0/24"
 
-# Atau buat file .env di folder project
+# Or create a .env file in the project folder
 echo 'INTERNAL_NETWORKS=160.22.250.0/23,192.168.56.0/24' > .env
 ```
 
-> **Penting:** Jika INTERNAL_NETWORKS tidak dikonfigurasi dengan subnet yang benar,
-> semua traffic akan teklasifikasi sebagai `external_to_external` dan rule 117004
-> (lateral movement) tidak akan pernah fired pada traffic nyata.
+> **Important:** If INTERNAL_NETWORKS is not configured correctly,
+> all traffic will be classified as `external_to_external` and rule 117004
+> (lateral movement) will never fire on real traffic.
 
-#### Step 5 — Konfigurasi Wazuh Agent localfile
+#### Step 5 — Configure Wazuh Agent localfile
 
-Tambahkan ke `/var/ossec/etc/ossec.conf` sebelum `</ossec_config>` terakhir:
+Add the following to `/var/ossec/etc/ossec.conf` before the last `</ossec_config>` tag:
 
 ```xml
 <localfile>
@@ -211,26 +211,26 @@ Tambahkan ke `/var/ossec/etc/ossec.conf` sebelum `</ossec_config>` terakhir:
 sudo systemctl restart wazuh-agent
 ```
 
-#### Step 6 — Jalankan Normalizer
+#### Step 6 — Run Normalizer
 
 ```bash
 python3 scripts/normalize_netflow_to_wazuh.py \
   --pmacct /var/log/netflow/netflow-raw.json \
   --output /var/log/netflow/netflow-wazuh.json
 
-# Verifikasi format nested JSON
+# Verify nested JSON format
 head -1 /var/log/netflow/netflow-wazuh.json | \
   python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flow']['protocol'], d['source']['ip'])"
-# Harus output: TCP x.x.x.x (bukan PROTOtcp)
+# Expected output: TCP x.x.x.x (not PROTOtcp)
 ```
 
-#### Step 7 — Setup Cron Otomatis
+#### Step 7 — Setup Automatic Cron
 
 ```bash
 bash scripts/setup_cron.sh
-# atau manual:
+# or manually:
 sudo crontab -e
-# Tambahkan:
+# Add the following line:
 # * * * * * rm -f /var/log/netflow/netflow-wazuh.json && python3 /path/to/scripts/normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/netflow-raw.json --output /var/log/netflow/netflow-wazuh.json
 ```
 
@@ -257,13 +257,13 @@ sudo chown wazuh:wazuh /var/ossec/etc/rules/netflow_rules.xml
 ```bash
 sudo systemctl restart wazuh-manager
 sudo systemctl status wazuh-manager | grep Active
-# Harus: active (running)
+# Expected: active (running)
 ```
 
-#### Step 4 — Apply Index Template (untuk numeric fields)
+#### Step 4 — Apply Index Template (for numeric fields)
 
-Supaya field `data.network.bytes` dan `data.network.packets` bisa di-aggregate
-(Sum/Avg) di Wazuh Dashboard:
+To enable Sum/Avg aggregation on `data.network.bytes` and `data.network.packets`
+in Wazuh Dashboard:
 
 ```bash
 curl -k -u admin:<password> \
@@ -283,24 +283,23 @@ curl -k -u admin:<password> \
   }'
 ```
 
-Output yang diharapkan: `{"acknowledged":true}`
+Expected output: `{"acknowledged":true}`
 
-> Template berlaku untuk index **baru** (besok dan seterusnya). Index hari ini tidak berubah.
+> This template applies to **new indexes** created after this point (tomorrow onward). Existing indexes are not affected.
 
-#### Step 5 — Validasi dengan wazuh-logtest
+#### Step 5 — Validate with wazuh-logtest
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
 ```
 
-Generate satu baris event untuk di-paste:
+Generate a sample event to paste (run on VM 2):
 
 ```bash
-# Di VM 2 — generate satu event dengan anomaly tag
 python3 scripts/generate_safe_netflow_test_events.py --scenario port_scan --count 1
 ```
 
-Copy output satu baris tersebut, paste ke prompt wazuh-logtest. Output yang diharapkan:
+Copy the single-line output and paste it into the wazuh-logtest prompt. Expected output:
 
 ```
 **Phase 2: Completed decoding.
@@ -323,29 +322,29 @@ Copy output satu baris tersebut, paste ke prompt wazuh-logtest. Output yang diha
 
 Generate synthetic attack scenarios:
 
-> ⚠️ **Penting:** Jika cron normalizer sedang aktif (setup_cron.sh sudah dijalankan),
-> **pause dulu cron-nya** sebelum generate test events — karena cron akan overwrite file
-> setiap menit dan events sintetis akan terhapus sebelum sempat dibaca Wazuh Agent.
+> ⚠️ **Important:** If the cron normalizer is active (setup_cron.sh already ran),
+> **pause it first** before generating test events — the cron overwrites the file
+> every minute and synthetic events will be lost before Wazuh Agent can read them.
 >
 > ```bash
-> # Pause cron sementara
-> sudo crontab -e  # comment out baris normalizer dengan #
+> # Pause cron temporarily
+> sudo crontab -e  # comment out the normalizer line with #
 > ```
 
 ```bash
-# Di VM 2
+# On VM 2
 python3 scripts/generate_safe_netflow_test_events.py \
   --scenario all \
   --output /var/log/netflow/netflow-wazuh.json
 ```
 
-Setelah verifikasi alert masuk, aktifkan kembali cron:
+After verifying alerts are received, re-enable cron:
 
 ```bash
-sudo crontab -e  # hapus tanda # dari baris normalizer
+sudo crontab -e  # remove the # from the normalizer line
 ```
 
-Tunggu 30 detik, cek di VM 1:
+Wait 30 seconds, then check on VM 1:
 
 ```bash
 sudo grep -E '"id":"11700[1-9]"' /var/ossec/logs/alerts/alerts.json | \
@@ -369,12 +368,12 @@ Expected output:
 
 ## 📊 Wazuh Dashboard
 
-Filter semua NetFlow events:
+Filter all NetFlow events:
 ```
 rule.groups: netflow
 ```
 
-Filter per detection:
+Filter by detection type:
 
 | Filter | Detection |
 |--------|-----------|
@@ -384,7 +383,7 @@ Filter per detection:
 | `rule.id: 117004` | Lateral movement |
 | `rule.id: 117005` | Suspicious DNS |
 
-Lihat `dashboards/visualization-guide.md` untuk panduan membuat visualisasi.
+See `dashboards/visualization-guide.md` for dashboard visualization instructions.
 
 ---
 
@@ -393,29 +392,29 @@ Lihat `dashboards/visualization-guide.md` untuk panduan membuat visualisasi.
 ```
 netflow-network-traffic-monitoring/
 ├── README.md
-├── .env.example                         ← konfigurasi environment variables
+├── .env.example                              ← environment variable configuration
 ├── collectors/
 │   └── pmacct/
-│       ├── pmacct-collector.sh          ← jalankan ini untuk start pmacctd
-│       ├── nfacctd-sample.conf          ← config file alternatif pmacctd
+│       ├── pmacct-collector.sh               ← run this to start pmacctd
+│       ├── nfacctd-sample.conf               ← alternative pmacctd config file
 │       └── pmacct-json-output-notes.md
 ├── scripts/
-│   ├── install_netflow_tools.sh         ← install pmacct + python deps
-│   ├── setup_cron.sh                    ← setup automasi normalizer setiap menit
-│   ├── normalize_netflow_to_wazuh.py    ← konversi pmacct JSON → Wazuh JSON
-│   ├── detect_flow_anomalies.py         ← tagging anomali sebelum masuk Wazuh
-│   ├── generate_safe_netflow_test_events.py  ← generate synthetic events untuk testing
-│   ├── rotate_netflow_logs.sh           ← arsip netflow-raw.json harian
-│   └── collect_netflow_evidence.sh      ← kumpulkan artefak saat investigasi
+│   ├── install_netflow_tools.sh              ← install pmacct + python dependencies
+│   ├── setup_cron.sh                         ← automate normalizer every minute
+│   ├── normalize_netflow_to_wazuh.py         ← convert pmacct JSON → Wazuh JSON
+│   ├── detect_flow_anomalies.py              ← tag anomalies before Wazuh ingestion
+│   ├── generate_safe_netflow_test_events.py  ← generate synthetic events for testing
+│   ├── rotate_netflow_logs.sh                ← archive netflow-raw.json daily
+│   └── collect_netflow_evidence.sh           ← collect artifacts during investigation
 ├── wazuh/
-│   ├── ossec-localfile-netflow-snippet.xml  ← tambahkan ke ossec.conf agent
-│   ├── agent-group-netflow-snippet.xml      ← opsional: centralized agent config
+│   ├── ossec-localfile-netflow-snippet.xml   ← add to ossec.conf on agent
+│   ├── agent-group-netflow-snippet.xml       ← optional: centralized agent config
 │   ├── decoders/netflow_decoders.xml
 │   └── rules/netflow_rules.xml
 ├── samples/
-│   ├── sample-pmacct-json-flow.json         ← contoh raw output pmacctd
-│   ├── sample-normalized-netflow-event.json ← contoh output normalizer
-│   └── sample-wazuh-alert-*.json            ← contoh alert per rule
+│   ├── sample-pmacct-json-flow.json          ← example raw pmacctd output
+│   ├── sample-normalized-netflow-event.json  ← example normalizer output
+│   └── sample-wazuh-alert-*.json             ← example alerts per rule
 ├── dashboards/
 │   ├── dashboard-fields-and-filters.md
 │   ├── saved-searches.md
@@ -439,18 +438,18 @@ netflow-network-traffic-monitoring/
 
 ## 🐛 Common Issues
 
-| Gejala | Penyebab | Fix |
-|--------|----------|-----|
-| Wazuh Manager gagal start | `<type>json</type>` di decoder | Deploy decoder versi terbaru |
-| Rules 117001-117008 tidak fired | Prefix `data.` di field name | Deploy rules versi terbaru |
-| `flow.protocol: PROTOtcp` | proto_map tidak handle string | Deploy normalizer versi terbaru |
-| nfcapd "No matched flows" | Cloud VM hypervisor filtering | Gunakan pmacctd bukan nfcapd |
-| Localfile duplicate warning | Entry ossec.conf dobel | Hapus salah satu entry |
-| `source.ip` tidak muncul di dashboard | Flat dot-notation JSON conflict | Deploy normalizer versi terbaru (nested JSON) |
-| Semua traffic `external_to_external` | INTERNAL_NETWORKS tidak dikonfigurasi | Set env var sesuai subnet lab, lihat Step 4 |
-| `data.network.bytes` tidak bisa di-Sum | Field ter-index sebagai keyword | Apply index template, lihat Step 4 VM1 |
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Wazuh Manager fails to start | `<type>json</type>` in decoder | Deploy latest decoder |
+| Rules 117001-117008 not firing | `data.` prefix in field names | Deploy latest rules |
+| `flow.protocol: PROTOtcp` | proto_map missing string protocols | Deploy latest normalizer |
+| nfcapd "No matched flows" | Cloud VM hypervisor packet filtering | Use pmacctd instead of nfcapd |
+| Localfile duplicate warning | Duplicate entry in ossec.conf | Remove duplicate entry |
+| `source.ip` missing in dashboard | Flat dot-notation JSON conflict | Deploy latest normalizer (nested JSON) |
+| All traffic shows `external_to_external` | INTERNAL_NETWORKS not configured | Set env var to match lab subnet, see Step 4 |
+| `data.network.bytes` not aggregatable | Field indexed as keyword not long | Apply index template, see VM1 Step 4 |
 
-Lihat `docs/17-troubleshooting.md` untuk detail lengkap.
+See `docs/17-troubleshooting.md` for detailed guidance.
 
 ---
 

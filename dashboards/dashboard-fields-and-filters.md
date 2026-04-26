@@ -8,25 +8,24 @@
 |-------|-------------|
 | @timestamp | Event time |
 | agent.name | Collector host |
-| source.ip | Source IP |
-| source.port | Source port |
-| destination.ip | Destination IP |
-| destination.port | Destination port |
-| flow.protocol | TCP/UDP/ICMP/IGMP |
-| flow.direction | Flow direction |
-| network.bytes | Bytes transferred |
-| network.packets | Packet count |
-| event.duration | Duration (seconds) |
-| service.name | Service name |
-| anomaly.tags | Anomaly tags |
+| data.source.ip | Source IP |
+| data.source.port | Source port |
+| data.destination.ip | Destination IP |
+| data.destination.port | Destination port |
+| data.flow.protocol | TCP/UDP/ICMP/IGMP |
+| data.flow.direction | Flow direction |
+| data.network.bytes | Bytes transferred |
+| data.network.packets | Packet count |
+| data.event.duration | Duration (seconds) |
+| data.service.name | Service name |
+| data.anomaly.tags | Anomaly tags |
 | rule.id | Rule ID |
 | rule.level | Rule severity level |
 | rule.description | Rule description |
 
-> **Note:** Fields above do NOT use the `data.` prefix. With `log_format: json` in
-> the Wazuh Agent localfile config, all JSON fields are decoded directly without prefix.
-> In older documentation you may see `data.source.ip` etc — those are incorrect for
-> this setup and will not match in filters or visualizations.
+> **Note:** Fields use nested JSON structure. In Wazuh Dashboard, all fields appear
+> with the `data.` prefix (e.g. `data.source.ip`, `data.flow.protocol`, `data.anomaly.tags`).
+> This is correct behavior when using nested JSON objects with `log_format: json`.
 
 ## Common Filter Combinations
 
@@ -41,13 +40,13 @@ rule.groups:network_anomaly
 rule.groups:netflow AND rule.level:>=9
 
 # Internal east-west traffic
-flow.direction:internal_to_internal
+data.flow.direction:internal_to_internal
 
-# Outbound large transfers
-flow.direction:internal_to_external AND network.bytes:>10000000
+# Large outbound transfers
+data.flow.direction:internal_to_external AND data.network.bytes:>10000000
 
 # SMB lateral movement candidates
-destination.port:445 AND flow.direction:internal_to_internal
+data.destination.port:445 AND data.flow.direction:internal_to_internal
 
 # DNS anomalies
 rule.id:117005

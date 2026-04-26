@@ -10,10 +10,10 @@ echo "============================================================"
 sudo apt update -y
 sudo apt install -y python3 python3-pip python3-venv jq curl
 
-# pmacct — required for packet capture from interface (primary collector)
+# pmacct — required for direct interface packet capture (primary collector)
 sudo apt install -y pmacct
 
-# Create directories
+# Create required directories
 sudo mkdir -p /var/log/netflow /opt/netflow-wazuh
 sudo chown "$USER":"$USER" /var/log/netflow /opt/netflow-wazuh
 sudo chmod 755 /var/log/netflow

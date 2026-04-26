@@ -27,6 +27,6 @@ This project demonstrates how to build **network flow-based visibility** in a Wa
 
 ---
 
-## Catatan (Bahasa Indonesia)
+## Key Concept
 
-NetFlow adalah teknologi yang mengukur "aliran" komunikasi jaringan — bukan isi paketnya (seperti packet capture), tetapi metadata komunikasinya: siapa yang bicara ke siapa, pakai protokol apa, berapa bytes, berapa lama. Bayangkan NetFlow seperti tagihan telepon yang mencatat siapa yang menelepon siapa dan berapa lama, tanpa merekam isi percakapannya. Ini membuat NetFlow lebih ringan dan lebih privacy-friendly dibanding packet capture, namun tetap sangat berguna untuk mendeteksi anomali perilaku jaringan.
+NetFlow is a technology that measures network communication "flows" — not the packet contents (like packet capture), but the communication metadata: who spoke to whom, using what protocol, how many bytes, for how long. Think of NetFlow like a phone bill that records who called whom and for how long, without recording the conversation itself. This makes NetFlow lighter and more privacy-friendly than full packet capture, while still being highly useful for detecting behavioral anomalies on the network.
