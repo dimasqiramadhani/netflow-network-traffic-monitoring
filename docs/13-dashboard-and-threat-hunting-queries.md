@@ -15,40 +15,40 @@
 | Filter | Purpose |
 |--------|---------|
 | `rule.id:117001` | Port scan alerts |
-| `data.anomaly.tags:possible_port_scan` | Tag-based filter |
+| `anomaly.tags:possible_port_scan` | Tag-based filter |
 
 ### High Outbound Traffic
 
 | Filter | Purpose |
 |--------|---------|
 | `rule.id:117002` | High outbound rule |
-| `data.flow.direction:internal_to_external` | Outbound flows |
-| `data.network.bytes:>50000000` | Large transfers |
+| `flow.direction:internal_to_external` | Outbound flows |
+| `network.bytes:>50000000` | Large transfers |
 
 ### Beaconing
 
 | Filter | Purpose |
 |--------|---------|
 | `rule.id:117003` | Beaconing alerts |
-| `data.anomaly.tags:possible_beaconing` | Tag filter |
+| `anomaly.tags:possible_beaconing` | Tag filter |
 
 ### Lateral Movement
 
 | Filter | Purpose |
 |--------|---------|
 | `rule.id:117004` | Lateral movement rule |
-| `data.destination.port:445` | SMB traffic |
-| `data.destination.port:3389` | RDP traffic |
-| `data.destination.port:5985` | WinRM traffic |
-| `data.flow.direction:internal_to_internal` | East-west traffic |
+| `destination.port:445` | SMB traffic |
+| `destination.port:3389` | RDP traffic |
+| `destination.port:5985` | WinRM traffic |
+| `flow.direction:internal_to_internal` | East-west traffic |
 
 ### DNS
 
 | Filter | Purpose |
 |--------|---------|
 | `rule.id:117005` | Suspicious DNS rule |
-| `data.destination.port:53` | DNS port |
-| `data.service.name:DNS` | DNS service name |
+| `destination.port:53` | DNS port |
+| `service.name:DNS` | DNS service name |
 
 ### MITRE
 
@@ -67,11 +67,11 @@
 rule.groups:network_anomaly AND @timestamp:[now-24h TO now]
 
 # High-severity flows from specific source
-rule.groups:netflow AND rule.level:>=9 AND data.source.ip:192.0.2.10
+rule.groups:netflow AND rule.level:>=9 AND source.ip:192.0.2.10
 
 # Internal lateral movement candidates
-data.flow.direction:internal_to_internal AND data.destination.port:(445 OR 3389 OR 22 OR 5985)
+flow.direction:internal_to_internal AND destination.port:(445 OR 3389 OR 22 OR 5985)
 
 # Potential exfiltration (>10MB outbound)
-data.flow.direction:internal_to_external AND data.network.bytes:>10000000
+flow.direction:internal_to_external AND network.bytes:>10000000
 ```

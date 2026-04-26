@@ -8,19 +8,23 @@ echo " ⚠️  LAB USE ONLY — Ubuntu 22.04 / 24.04"
 echo "============================================================"
 
 sudo apt update -y
-sudo apt install -y nfdump python3 python3-pip python3-venv jq curl
+sudo apt install -y python3 python3-pip python3-venv jq curl
+
+# pmacct — required for packet capture from interface (primary collector)
+sudo apt install -y pmacct
 
 # Create directories
-sudo mkdir -p /var/log/netflow /var/cache/nfdump /opt/netflow-wazuh
-sudo chown "$USER":"$USER" /var/log/netflow /var/cache/nfdump /opt/netflow-wazuh
+sudo mkdir -p /var/log/netflow /opt/netflow-wazuh
+sudo chown "$USER":"$USER" /var/log/netflow /opt/netflow-wazuh
+sudo chmod 755 /var/log/netflow
 
-# Optional: pmacct
-read -rp "Install pmacct? [y/N]: " inst_pmacct
-[[ "$inst_pmacct" =~ ^[Yy]$ ]] && sudo apt install -y pmacct
-
-# Optional: softflowd
-read -rp "Install softflowd? [y/N]: " inst_soft
-[[ "$inst_soft" =~ ^[Yy]$ ]] && sudo apt install -y softflowd
+# Optional: nfdump (only needed if using nfcapd/softflowd pipeline instead of pmacctd)
+read -rp "Install nfdump/softflowd (optional, not required for pmacctd pipeline)? [y/N]: " inst_nf
+if [[ "$inst_nf" =~ ^[Yy]$ ]]; then
+    sudo apt install -y nfdump softflowd
+    sudo mkdir -p /var/cache/nfdump
+    sudo chown "$USER":"$USER" /var/cache/nfdump
+fi
 
 echo "✅ Dependencies installed"
-echo "   Next: bash scripts/start_nfcapd_collector.sh"
+echo "   Next: start pmacctd — see README.md Setup Guide"

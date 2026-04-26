@@ -4,8 +4,8 @@
 
 ### Step 1: Confirm Alert
 - rule.id, rule.level, rule.description
-- data.anomaly.tags — what type of anomaly?
-- data.source.ip, data.destination.ip, data.destination.port
+- anomaly.tags — what type of anomaly?
+- source.ip, destination.ip, destination.port
 
 ### Step 2: Determine Flow Direction
 - `internal_to_internal` → lateral movement risk
@@ -13,11 +13,11 @@
 - `external_to_internal` → inbound attack/access risk
 
 ### Step 3: Review Flow Metadata
-- `data.network.bytes` — how much data?
-- `data.network.packets` — packet count
-- `data.event.duration` — how long?
-- `data.flow.protocol` — TCP/UDP/ICMP?
-- `data.service.name` — what service?
+- `network.bytes` — how much data?
+- `network.packets` — packet count
+- `event.duration` — how long?
+- `flow.protocol` — TCP/UDP/ICMP?
+- `service.name` — what service?
 
 ### Step 4: Compare Against Baseline
 - Is this source IP normally active?

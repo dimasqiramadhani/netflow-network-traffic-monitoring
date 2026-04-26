@@ -1,8 +1,11 @@
 # Wazuh Dashboard — NetFlow Saved Searches
 
+> **Note:** Fields use nested JSON. In Wazuh Dashboard prefix all fields with `data.`
+> (e.g. `data.source.ip`, `data.flow.direction`, `data.anomaly.tags`).
+
 ## 1. NetFlow All Events
 - Query: `rule.groups:netflow`
-- Columns: timestamp, agent.name, source.ip, destination.ip, destination.port, protocol, bytes, direction, anomaly.tags
+- Columns: timestamp, agent.name, source.ip, destination.ip, destination.port, flow.protocol, network.bytes, flow.direction, anomaly.tags
 
 ## 2. NetFlow Anomalies Only
 - Query: `rule.groups:network_anomaly`
@@ -13,7 +16,7 @@
 - Purpose: Possible data exfiltration candidates
 
 ## 4. Internal Lateral Movement Flows
-- Query: `data.flow.direction:internal_to_internal AND rule.id:117004`
+- Query: `flow.direction:internal_to_internal AND rule.id:117004`
 
 ## 5. Suspicious DNS Flows
 - Query: `rule.id:117005`

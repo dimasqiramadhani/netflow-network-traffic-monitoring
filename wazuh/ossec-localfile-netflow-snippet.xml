@@ -5,23 +5,20 @@
   Author: Dimas Qi Ramadhani
 
   DEPLOYMENT:
-    Merge this <localfile> block into /var/ossec/etc/ossec.conf
-    on the NetFlow collector host (Ubuntu endpoint running Wazuh Agent)
-    Then: sudo systemctl restart wazuh-agent
+    Tambahkan blok <localfile> ini ke /var/ossec/etc/ossec.conf
+    di host collector (Ubuntu dengan Wazuh Agent terpasang),
+    sebelum tag </ossec_config> terakhir.
+    Lalu: sudo systemctl restart wazuh-agent
 
-  PERMISSION REQUIREMENT:
-    /var/log/netflow/netflow-wazuh.json must be readable by the wazuh user:
-      sudo chown root:wazuh /var/log/netflow/netflow-wazuh.json
-      sudo chmod 640 /var/log/netflow/netflow-wazuh.json
-    Or set directory-level permission:
-      sudo chown root:wazuh /var/log/netflow/
-      sudo chmod 750 /var/log/netflow/
+  CARA KERJA DI SETUP INI:
+    - Normalizer (cron setiap menit) menulis file baru setiap run (mode overwrite)
+    - Wazuh Agent mendeteksi perubahan file dan membaca isinya
+    - Setiap baris JSON diproses sebagai satu event
 
-  NOTES:
-    - log_format: json enables native JSON field extraction per log line
-    - Wazuh reads new lines appended to this file (inode tracking)
-    - Each line in netflow-wazuh.json must be valid JSON (one event per line)
-    - rotate_netflow_logs.sh handles log rotation without breaking Wazuh reading
+  PERMISSION:
+    sudo chmod 644 /var/log/netflow/netflow-wazuh.json
+    sudo mkdir -p /var/log/netflow
+    sudo chmod 755 /var/log/netflow
 -->
 
 <localfile>

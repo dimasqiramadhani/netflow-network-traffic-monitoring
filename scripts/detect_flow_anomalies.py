@@ -69,8 +69,8 @@ state = FlowState()
 
 def detect_port_scan(event: dict) -> bool:
     """True if source IP has connected to many distinct destination ports."""
-    src  = event.get("source.ip", "")
-    dst_port = event.get("destination.port", "")
+    src  = event.get("source", {}).get("ip", "")
+    dst_port = event.get("destination", {}).get("port", "")
     if not src or not dst_port:
         return False
     state.src_dst_ports[src].add(dst_port)
@@ -79,20 +79,20 @@ def detect_port_scan(event: dict) -> bool:
 
 def detect_high_outbound(event: dict) -> bool:
     """True if source IP has sent more than threshold bytes externally."""
-    direction = event.get("flow.direction", "")
+    direction = event.get("flow", {}).get("direction", "")
     if direction != "internal_to_external":
         return False
-    src   = event.get("source.ip", "")
-    bytes_= event.get("network.bytes", 0)
+    src   = event.get("source", {}).get("ip", "")
+    bytes_= event.get("network", {}).get("bytes", 0)
     state.src_outbound_bytes[src] += bytes_
     return state.src_outbound_bytes[src] >= EXTERNAL_BYTES_THRESHOLD
 
 
 def detect_beaconing(event: dict) -> bool:
     """True if (src, dst, dport) shows regular interval connections."""
-    src  = event.get("source.ip", "")
-    dst  = event.get("destination.ip", "")
-    dport = event.get("destination.port", "")
+    src  = event.get("source", {}).get("ip", "")
+    dst  = event.get("destination", {}).get("ip", "")
+    dport = event.get("destination", {}).get("port", "")
     ts_str = event.get("@timestamp", "")
 
     if not (src and dst and dport and ts_str):
@@ -124,29 +124,29 @@ def detect_beaconing(event: dict) -> bool:
 
 def detect_lateral_movement(event: dict) -> bool:
     """True if internal-to-internal flow on admin/service ports."""
-    direction = event.get("flow.direction", "")
-    dport     = event.get("destination.port", "")
+    direction = event.get("flow", {}).get("direction", "")
+    dport     = event.get("destination", {}).get("port", "")
     return direction == "internal_to_internal" and str(dport) in LATERAL_MOVEMENT_PORTS
 
 
 def detect_suspicious_dns(event: dict) -> bool:
     """True if source IP has generated excessive DNS flows."""
-    service = event.get("service.name", "")
-    proto   = event.get("flow.protocol", "")
-    dport   = event.get("destination.port", "")
+    service = event.get("service", {}).get("name", "")
+    proto   = event.get("flow", {}).get("protocol", "")
+    dport   = event.get("destination", {}).get("port", "")
 
     if not (service == "DNS" or (proto == "UDP" and dport == "53")):
         return False
 
-    src = event.get("source.ip", "")
+    src = event.get("source", {}).get("ip", "")
     state.dns_flow_count[src] += 1
     return state.dns_flow_count[src] >= DNS_FLOW_COUNT_THRESHOLD
 
 
 def detect_dos_pattern(event: dict) -> bool:
     """True if destination IP has received excessive packets."""
-    dst     = event.get("destination.ip", "")
-    packets = event.get("network.packets", 0)
+    dst     = event.get("destination", {}).get("ip", "")
+    packets = event.get("network", {}).get("packets", 0)
     state.dst_packet_count[dst] += packets
     return state.dst_packet_count[dst] >= DOS_PACKET_THRESHOLD
 
@@ -169,7 +169,7 @@ def enrich_events(input_stream, output_stream) -> tuple:
             errors += 1
             continue
 
-        tags: List[str] = list(event.get("anomaly.tags", []))
+        tags: List[str] = list(event.get("anomaly", {}).get("tags", []))
 
         if detect_port_scan(event):
             if "possible_port_scan" not in tags:
@@ -195,7 +195,7 @@ def enrich_events(input_stream, output_stream) -> tuple:
             if "possible_dos_pattern" not in tags:
                 tags.append("possible_dos_pattern")
 
-        event["anomaly.tags"] = tags
+        event.setdefault("anomaly", {})["tags"] = tags
         if tags:
             tagged += 1
 

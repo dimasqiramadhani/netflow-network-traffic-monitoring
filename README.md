@@ -20,7 +20,7 @@ Most SIEM deployments are log-centric: Windows Events, Linux syslog, application
 
 NetFlow doesn't capture packet payloads — it captures **communication metadata**: who spoke to whom, on what port, for how long, how many bytes. That's often exactly what's needed for behavioral anomaly detection.
 
-> **This is a lab-based portfolio project.** All IP addresses, hostnames, and flow data use dummy values. No real network traffic, no production credentials, no public exfiltration.
+> **This is a lab-based portfolio project.** All IP addresses, hostnames, and flow data use dummy values. No real network traffic beyond the lab environment.
 
 ---
 
@@ -28,47 +28,48 @@ NetFlow doesn't capture packet payloads — it captures **communication metadata
 
 | Component | Role |
 |-----------|------|
-| NetFlow Exporter | Lab router, firewall, or softflowd on Linux host |
-| nfcapd / pmacct | Receives flow records on UDP port 2055 |
-| Python Normalizer | Converts flow data to Wazuh-compatible JSON |
-| Wazuh Agent | Reads normalized JSON via localfile |
-| Custom Decoder | Parses NetFlow JSON fields |
-| Custom Rules 117001–117010 | Flow anomaly detection |
+| pmacctd | Captures flow records directly from network interface (primary collector) |
+| Python Normalizer | Converts pmacct JSON output to Wazuh-compatible JSON |
+| Wazuh Agent | Reads normalized JSON via localfile (`log_format: json`) |
+| Custom Decoder | Identifies NetFlow JSON events by `@timestamp` prefix |
+| Custom Rules 117000–117009 | Flow anomaly detection |
 | Wazuh Dashboard | Flow threat hunting and visualization |
 
 ---
 
-## 🏗️ Architecture Diagram
+## 🏗️ Architecture
 
 ```mermaid
 flowchart TD
-    subgraph LAB_NET["Lab Network"]
-        ROUTER["Lab Router/Firewall\nor softflowd on Linux host\nNetFlow exporter"]
-        HOSTS["Lab Endpoints\nGenerating traffic"]
-        ROUTER <--> HOSTS
+    NIC["🖧 Network Interface\nenp1s0"]
+
+    subgraph VM2["VM 2 — NetFlow Collector Host (Ubuntu)"]
+        direction TB
+        PMACCT["pmacctd\ndirect packet capture"]
+        RAW["/var/log/netflow/\nnetflow-raw.json"]
+        NORM["normalize_netflow_to_wazuh.py\ncron — every 1 min"]
+        WAZUH_JSON["/var/log/netflow/\nnetflow-wazuh.json"]
+        AGENT["Wazuh Agent\nlocalfile · log_format: json"]
+
+        PMACCT -->|"flush every 60s"| RAW
+        RAW --> NORM
+        NORM -->|"overwrite"| WAZUH_JSON
+        WAZUH_JSON --> AGENT
     end
 
-    subgraph COLLECTOR["NetFlow Collector Host (Ubuntu)"]
-        NFCAPD["nfcapd / nfacctd\nUDP :2055"]
-        FLOWFILES["Flow Files\n/var/cache/nfdump/"]
-        NORMALIZER["normalize_netflow_to_wazuh.py\nFlow → Wazuh JSON"]
-        ANOMALY["detect_flow_anomalies.py\nAnomaly tagging"]
-        JSONLOG["/var/log/netflow/netflow-wazuh.json"]
-        AGENT["Wazuh Agent\nlocalfile reader"]
-
-        NFCAPD --> FLOWFILES --> NORMALIZER --> ANOMALY --> JSONLOG --> AGENT
-    end
-
-    subgraph WAZUH["Wazuh Stack"]
-        MANAGER["Wazuh Manager\nDecoder + Rules 117001-117010"]
+    subgraph VM1["VM 1 — Wazuh Server (All-in-One)"]
+        direction TB
+        MANAGER["Wazuh Manager\nDecoder · Rules 117000–117009"]
         INDEXER["Wazuh Indexer\nOpenSearch"]
-        DASHBOARD["Wazuh Dashboard\nFlow threat hunting"]
+        DASHBOARD["Wazuh Dashboard\nrule.groups:netflow"]
+
+        MANAGER -->|"index alerts"| INDEXER
+        INDEXER --> DASHBOARD
     end
 
-    ROUTER -->|NetFlow UDP :2055| NFCAPD
-    AGENT -->|events port 1514| MANAGER
-    MANAGER --> INDEXER --> DASHBOARD
-    DASHBOARD --> ANALYST["🔍 Network Analyst\nAnomaly Investigation + Report"]
+    NIC -->|"live traffic"| PMACCT
+    AGENT -->|"events · port 1514"| MANAGER
+    DASHBOARD --> ANALYST["🔍 Analyst\nThreat Hunting · Investigation"]
 ```
 
 ---
@@ -78,23 +79,13 @@ flowchart TD
 NetFlow records represent **conversations** between IP endpoints:
 
 ```
-src=192.168.56.10  dst=203.0.113.50  sport=52341 dport=443  proto=TCP
-bytes=48291  packets=42  duration=12.4s  flags=SYN,ACK,FIN
+src=192.168.1.10  dst=203.0.113.50  sport=52341  dport=443  proto=TCP
+bytes=48291  packets=42  duration=12.4s
 ```
 
-This single flow tells us: a lab host made an HTTPS connection to an external IP, transferred ~47KB in 12 seconds — without capturing any of the encrypted payload.
+**NetFlow does NOT capture:** passwords, encrypted payload, file contents, HTTP URLs.
 
-**NetFlow does NOT capture:**
-- Passwords or credentials
-- Encrypted payload content
-- File contents being transferred
-- HTTP headers or URLs (without enrichment)
-
-**NetFlow DOES capture:**
-- Communication patterns (who talks to whom)
-- Volume anomalies (who sends too much)
-- Behavioral patterns (beaconing, scanning)
-- Protocol usage on unexpected ports
+**NetFlow DOES capture:** communication patterns, volume anomalies, beaconing behavior, protocol usage on unexpected ports.
 
 ---
 
@@ -107,132 +98,322 @@ This single flow tells us: a lab host made an HTTPS connection to an external IP
 | Beaconing | Periodic same-dst connections | T1071 | 117003 |
 | Lateral movement | Int→Int on SMB/RDP/SSH/WinRM | T1021 | 117004 |
 | Suspicious DNS flow | High UDP/53 volume | T1071.004 | 117005 |
-| External inbound sensitive | Ext→Int on admin ports | T1021 contextual | 117006 |
-| Unusual dst port | Int→Ext on uncommon port | T1071 contextual | 117007 |
+| External inbound sensitive | Ext→Int on admin ports | T1021 | 117006 |
+| Unusual dst port | Int→Ext on uncommon port | T1071 | 117007 |
 | DoS-like pattern | High packets to same dst | T1498 | 117008 |
-| Multiple anomalies | 3+ alerts from same src | Multi | 117009 |
+| Multiple port scan anomalies | 3+ rule 117001 alerts from same src | T1046 | 117009 |
+
+---
+
+## ⚙️ Requirements
+
+- **VM 1:** Ubuntu Server 22.04 (All-in-One: Manager + Indexer + Dashboard)
+- **VM 2:** Ubuntu Server 22.04 (NetFlow Collector Host)
+  - Wazuh Agent v4.x (same version as server)
+  - pmacct (pmacctd)
+  - Python 3.8+
+- Root/sudo access on both VMs
+
+---
+
+## 🚀 Setup Guide
+
+### VM 2 — NetFlow Collector Host
+
+#### Step 1 — Install Wazuh Agent
+
+```bash
+WAZUH_MANAGER_IP="<IP_VM1>"
+
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | \
+  gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg \
+  --import && chmod 644 /usr/share/keyrings/wazuh.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] \
+  https://packages.wazuh.com/4.x/apt/ stable main" | \
+  sudo tee /etc/apt/sources.list.d/wazuh.list
+
+sudo apt update
+sudo WAZUH_MANAGER="$WAZUH_MANAGER_IP" apt install wazuh-agent -y
+sudo systemctl enable wazuh-agent && sudo systemctl start wazuh-agent
+```
+
+#### Step 2 — Install Tools
+
+```bash
+sudo bash scripts/install_netflow_tools.sh
+```
+
+#### Step 3 — Jalankan pmacctd
+
+Cek nama interface:
+
+```bash
+ip a  # catat nama interface, contoh: enp1s0, eth0
+```
+
+Jalankan collector:
+
+```bash
+bash collectors/pmacct/pmacct-collector.sh
+# atau manual:
+sudo pmacctd -i enp1s0 \
+  -c src_host,dst_host,src_port,dst_port,proto \
+  -P print -O json \
+  -o /var/log/netflow/netflow-raw.json \
+  -r 60 -D
+```
+
+Tunggu 65 detik, verifikasi:
+
+```bash
+cat /var/log/netflow/netflow-raw.json | head -3
+# Harus muncul JSON dengan ip_src, ip_dst, ip_proto, packets, bytes
+```
+
+#### Step 4 — Konfigurasi Wazuh Agent localfile
+
+Tambahkan ke `/var/ossec/etc/ossec.conf` sebelum `</ossec_config>` terakhir:
+
+```xml
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/netflow/netflow-wazuh.json</location>
+</localfile>
+```
+
+```bash
+sudo systemctl restart wazuh-agent
+```
+
+#### Step 5 — Jalankan Normalizer
+
+```bash
+python3 scripts/normalize_netflow_to_wazuh.py \
+  --pmacct /var/log/netflow/netflow-raw.json \
+  --output /var/log/netflow/netflow-wazuh.json
+
+# Verifikasi
+head -1 /var/log/netflow/netflow-wazuh.json | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flow.protocol'], d['source.ip'])"
+# Harus output: TCP x.x.x.x (bukan PROTOtcp)
+```
+
+#### Step 6 — Setup Cron Otomatis
+
+```bash
+bash scripts/setup_cron.sh
+# atau manual:
+sudo crontab -e
+# Tambahkan:
+# * * * * * rm -f /var/log/netflow/netflow-wazuh.json && python3 /path/to/scripts/normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/netflow-raw.json --output /var/log/netflow/netflow-wazuh.json
+```
+
+---
+
+### VM 1 — Wazuh Server
+
+#### Step 1 — Deploy Decoder
+
+```bash
+sudo cp wazuh/decoders/netflow_decoders.xml /var/ossec/etc/decoders/
+sudo chown wazuh:wazuh /var/ossec/etc/decoders/netflow_decoders.xml
+```
+
+#### Step 2 — Deploy Rules
+
+```bash
+sudo cp wazuh/rules/netflow_rules.xml /var/ossec/etc/rules/
+sudo chown wazuh:wazuh /var/ossec/etc/rules/netflow_rules.xml
+```
+
+#### Step 3 — Restart Wazuh Manager
+
+```bash
+sudo systemctl restart wazuh-manager
+sudo systemctl status wazuh-manager | grep Active
+# Harus: active (running)
+```
+
+#### Step 4 — Validasi dengan wazuh-logtest
+
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+```
+
+Generate satu baris event untuk di-paste:
+
+```bash
+# Di VM 2 — generate satu event dengan anomaly tag
+python3 scripts/generate_safe_netflow_test_events.py --scenario port_scan --count 1
+```
+
+Copy output satu baris tersebut, paste ke prompt wazuh-logtest. Output yang diharapkan:
+
+```
+**Phase 2: Completed decoding.
+        name: 'json'
+        source: 'netflow'
+        anomaly.tags: '['possible_port_scan']'
+
+**Phase 3: Completed filtering (rules).
+        id: '117001'
+        level: '9'
+**Alert to be generated.
+```
+
+---
+
+## 🧪 Testing Detection Rules
+
+Generate synthetic attack scenarios:
+
+> ⚠️ **Penting:** Jika cron normalizer sedang aktif (setup_cron.sh sudah dijalankan),
+> **pause dulu cron-nya** sebelum generate test events — karena cron akan overwrite file
+> setiap menit dan events sintetis akan terhapus sebelum sempat dibaca Wazuh Agent.
+>
+> ```bash
+> # Pause cron sementara
+> sudo crontab -e  # comment out baris normalizer dengan #
+> ```
+
+```bash
+# Di VM 2
+python3 scripts/generate_safe_netflow_test_events.py \
+  --scenario all \
+  --output /var/log/netflow/netflow-wazuh.json
+```
+
+Setelah verifikasi alert masuk, aktifkan kembali cron:
+
+```bash
+sudo crontab -e  # hapus tanda # dari baris normalizer
+```
+
+Tunggu 30 detik, cek di VM 1:
+
+```bash
+sudo grep -E '"id":"11700[1-9]"' /var/ossec/logs/alerts/alerts.json | \
+  python3 -c "
+import sys, json
+from collections import Counter
+c = Counter(json.loads(l)['rule']['id'] for l in sys.stdin)
+[print(k, v, 'alerts') for k, v in sorted(c.items())]
+"
+```
+
+Expected output:
+```
+117001 25 alerts   ← Port scan
+117002 5 alerts    ← High outbound
+117003 8 alerts    ← Beaconing
+117005 120 alerts  ← Suspicious DNS
+```
+
+---
+
+## 📊 Wazuh Dashboard
+
+Filter semua NetFlow events:
+```
+rule.groups: netflow
+```
+
+Filter per detection:
+
+| Filter | Detection |
+|--------|-----------|
+| `rule.id: 117001` | Port scan |
+| `rule.id: 117002` | High outbound |
+| `rule.id: 117003` | Beaconing / C2 |
+| `rule.id: 117004` | Lateral movement |
+| `rule.id: 117005` | Suspicious DNS |
+
+Lihat `dashboards/visualization-guide.md` untuk panduan membuat visualisasi.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-wazuh-netflow/
+netflow-network-traffic-monitoring/
 ├── README.md
-├── LICENSE
-├── .gitignore
-├── .env.example
-├── docs/
-│   └── 01-overview.md ... 19-improvement-ideas.md
+├── .env.example                         ← konfigurasi environment variables
 ├── collectors/
-│   ├── nfdump/
-│   │   ├── nfcapd-setup-notes.md
-│   │   └── nfdump-export-json-notes.md
-│   ├── pmacct/
-│   │   ├── nfacctd-sample.conf
-│   │   └── pmacct-json-output-notes.md
-│   └── softflowd/
-│       └── softflowd-exporter-notes.md
+│   └── pmacct/
+│       ├── pmacct-collector.sh          ← jalankan ini untuk start pmacctd
+│       ├── nfacctd-sample.conf          ← config file alternatif pmacctd
+│       └── pmacct-json-output-notes.md
 ├── scripts/
-│   ├── install_netflow_tools.sh
-│   ├── start_nfcapd_collector.sh
-│   ├── export_nfdump_to_json.sh
-│   ├── normalize_netflow_to_wazuh.py
-│   ├── generate_safe_netflow_test_events.py
-│   ├── detect_flow_anomalies.py
-│   ├── rotate_netflow_logs.sh
-│   └── collect_netflow_evidence.sh
+│   ├── install_netflow_tools.sh         ← install pmacct + python deps
+│   ├── setup_cron.sh                    ← setup automasi normalizer setiap menit
+│   ├── normalize_netflow_to_wazuh.py    ← konversi pmacct JSON → Wazuh JSON
+│   ├── detect_flow_anomalies.py         ← tagging anomali sebelum masuk Wazuh
+│   ├── generate_safe_netflow_test_events.py  ← generate synthetic events untuk testing
+│   ├── rotate_netflow_logs.sh           ← arsip netflow-raw.json harian
+│   └── collect_netflow_evidence.sh      ← kumpulkan artefak saat investigasi
 ├── wazuh/
-│   ├── ossec-localfile-netflow-snippet.xml
-│   ├── agent-group-netflow-snippet.xml
+│   ├── ossec-localfile-netflow-snippet.xml  ← tambahkan ke ossec.conf agent
+│   ├── agent-group-netflow-snippet.xml      ← opsional: centralized agent config
 │   ├── decoders/netflow_decoders.xml
 │   └── rules/netflow_rules.xml
 ├── samples/
-│   ├── sample-nfdump-output.txt
-│   ├── sample-pmacct-json-flow.json
-│   ├── sample-normalized-netflow-event.json
-│   ├── sample-wazuh-alert-portscan.json
-│   ├── sample-wazuh-alert-high-bytes-out.json
-│   ├── sample-wazuh-alert-beaconing.json
-│   ├── sample-wazuh-alert-lateral-movement.json
-│   └── sample-wazuh-alert-suspicious-dns-flow.json
+│   ├── sample-pmacct-json-flow.json         ← contoh raw output pmacctd
+│   ├── sample-normalized-netflow-event.json ← contoh output normalizer
+│   └── sample-wazuh-alert-*.json            ← contoh alert per rule
 ├── dashboards/
 │   ├── dashboard-fields-and-filters.md
 │   ├── saved-searches.md
 │   └── visualization-guide.md
+├── docs/
+│   ├── 01-overview.md
+│   ├── 03-netflow-concept.md
+│   ├── 04-netflow-vs-packet-capture.md
+│   ├── 12-detection-use-cases.md
+│   ├── 13-dashboard-and-threat-hunting-queries.md
+│   ├── 15-incident-investigation-playbook.md
+│   └── 17-troubleshooting.md
 ├── reports/
 │   ├── sample-netflow-monitoring-report.md
 │   ├── sample-network-anomaly-detection-report.md
 │   └── sample-incident-investigation-report.md
-└── screenshots/
-    └── README.md
+└── screenshots/README.md
 ```
 
 ---
 
-## ⚙️ Requirements
+## 🐛 Common Issues
 
-- Wazuh Server v4.x
-- Ubuntu Server (collector host) with Wazuh Agent
-- nfdump + nfcapd OR pmacct (nfacctd)
-- Python 3.8+
-- NetFlow exporter: lab router, softflowd, or sample generator
-- Root/sudo access
+| Gejala | Penyebab | Fix |
+|--------|----------|-----|
+| Wazuh Manager gagal start | `<type>json</type>` di decoder | Deploy decoder versi terbaru |
+| Rules 117001-117008 tidak fired | Prefix `data.` di field name | Deploy rules versi terbaru |
+| `flow.protocol: PROTOtcp` | proto_map tidak handle string | Deploy normalizer versi terbaru |
+| nfcapd "No matched flows" | Cloud VM hypervisor filtering | Gunakan pmacctd bukan nfcapd |
+| Localfile duplicate warning | Entry ossec.conf dobel | Hapus salah satu entry |
 
----
-
-## 🚀 Quick Start
-
-### 1. Install Tools
-
-```bash
-sudo bash scripts/install_netflow_tools.sh
-```
-
-### 2. Start Collector
-
-```bash
-sudo bash scripts/start_nfcapd_collector.sh
-```
-
-### 3. Generate Test Events (No Exporter Needed)
-
-```bash
-python3 scripts/generate_safe_netflow_test_events.py
-```
-
-### 4. Deploy Wazuh Rules
-
-```bash
-sudo cp wazuh/decoders/netflow_decoders.xml /var/ossec/etc/decoders/
-sudo cp wazuh/rules/netflow_rules.xml /var/ossec/etc/rules/
-sudo systemctl restart wazuh-manager
-```
-
-### 5. Review in Dashboard
-
-```
-Filter: rule.groups:netflow
-```
+Lihat `docs/17-troubleshooting.md` untuk detail lengkap.
 
 ---
 
 ## 📚 References
 
 - [Wazuh Documentation](https://documentation.wazuh.com/)
-- [nfdump Project](https://github.com/phaag/nfdump)
 - [pmacct Project](http://www.pmacct.net/)
-- [MITRE ATT&CK TA0007 Discovery](https://attack.mitre.org/tactics/TA0007/)
+- [MITRE ATT&CK T1046](https://attack.mitre.org/techniques/T1046/)
+- [MITRE ATT&CK T1071](https://attack.mitre.org/techniques/T1071/)
 
 ---
 
 ## ⚖️ Disclaimer
 
-Lab and portfolio use only. All IP addresses, hostnames, and flow data are fictional. No real network traffic captured, no production credentials, no real data exfiltration. Never capture or analyze traffic from networks you don't own or have authorization to monitor.
+Lab and portfolio use only. All IP addresses, hostnames, and flow data are fictional. Never capture or analyze traffic from networks you don't own or have explicit authorization to monitor.
 
 ---
 
 ## 👤 Author
 
-**Dimas Qi Ramadhani** — Cybersecurity Engineer | Network Security · SIEM · Detection Engineering  
-GitHub: [@dimasqiramadhani](https://github.com/dimasqiramadhani)
+**Dimasqi Ramadhani** — Cybersecurity Engineer | Network Security · SIEM · Detection Engineering  
+GitHub: [@dimasqiramadhani](https://github.com/dimasqiramadhani)  
+Email: dimasqiramadhani@gmail.com  
+LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)

@@ -18,7 +18,7 @@ This project demonstrates how to build **network flow-based visibility** in a Wa
 | Domain | Skills |
 |--------|--------|
 | Networking | NetFlow, IPFIX, sFlow protocols and field structure |
-| Collector Design | nfdump/nfcapd, pmacct/nfacctd, softflowd |
+| Collector Design | pmacctd (direct interface capture), pipeline normalization |
 | Log Engineering | Flow normalization, JSON output, field mapping |
 | Wazuh | Custom decoder (JSON_Decoder), custom rules, localfile |
 | Detection | Port scan, beaconing, lateral movement, exfiltration indicators |

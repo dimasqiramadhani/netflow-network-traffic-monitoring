@@ -1,20 +1,61 @@
 {
-  "_comment": "DUMMY DATA — Sample Wazuh alert for rule 117002 (high outbound bytes)",
+  "_comment": "DUMMY DATA \u2014 Sample Wazuh alert for rule 117002 (high outbound bytes)",
   "timestamp": "2026-04-25T10:00:52.000+0000",
   "rule": {
-    "id": "117002", "level": 10,
-    "description": "NetFlow: High outbound traffic volume from 192.168.56.10 — 52428800 bytes to 203.0.113.99",
-    "groups": ["netflow", "network_anomaly", "high_outbound", "possible_exfiltration"],
-    "mitre": {"id": ["T1041", "T1567"]}
+    "id": "117002",
+    "level": 10,
+    "description": "NetFlow: High outbound traffic volume from 192.168.56.10 \u2014 52428800 bytes to 203.0.113.99",
+    "groups": [
+      "netflow",
+      "network_anomaly",
+      "high_outbound",
+      "possible_exfiltration"
+    ],
+    "mitre": {
+      "id": [
+        "T1041",
+        "T1567"
+      ]
+    }
   },
-  "agent": {"id": "007", "name": "lab-collector-01"},
+  "agent": {
+    "id": "007",
+    "name": "lab-collector-01"
+  },
   "data": {
-    "source": "netflow", "source.ip": "192.168.56.10",
-    "destination.ip": "203.0.113.99", "destination.port": "443",
-    "flow.protocol": "TCP", "flow.direction": "internal_to_external",
-    "network.bytes": 52428800, "network.packets": 420,
-    "event.duration": 45.0, "service.name": "HTTPS",
-    "anomaly.tags": ["high_outbound_bytes"]
+    "source": {
+      "ip": "192.168.56.10",
+      "port": "55000"
+    },
+    "destination": {
+      "ip": "203.0.113.99",
+      "port": "443"
+    },
+    "flow": {
+      "protocol": "TCP",
+      "direction": "internal_to_external"
+    },
+    "network": {
+      "bytes": 52428800,
+      "packets": 420
+    },
+    "event": {
+      "duration": 45.0,
+      "type": "network",
+      "category": "network_traffic"
+    },
+    "tcp": {
+      "flags": ""
+    },
+    "service": {
+      "name": "HTTPS"
+    },
+    "anomaly": {
+      "tags": [
+        "high_outbound_bytes"
+      ]
+    },
+    "netflow": "true"
   },
   "analyst_notes": "~50MB transferred to external IP 203.0.113.99 over HTTPS. Validate: authorized backup/sync job? Check proxy logs for URL. Check endpoint process tree on 192.168.56.10."
 }

@@ -7,16 +7,18 @@ Project: Network Flow Monitoring and Anomaly Detection with Wazuh
 Author:  Dimas Qi Ramadhani
 
 Description:
-    Reads flow data from nfdump text output (stdin or file) or pmacct JSON file
+    Reads flow data from pmacct JSON file (primary) or nfdump text output (legacy),
     and outputs one Wazuh-compatible JSON event per line to stdout or file.
 
-    Each output line contains normalized fields that map to Wazuh rule conditions
-    and dashboard fields after JSON_Decoder processing.
+    Primary usage: --pmacct with output from pmacctd direct interface capture.
+    Output mode: overwrite (not append) — safe to run repeatedly via cron.
 
-Usage:
+Usage (primary — pmacctd):
+    python3 normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/netflow-raw.json --output /var/log/netflow/netflow-wazuh.json
+
+Usage (legacy — nfdump):
     nfdump -r <flowfile> -o csv | python3 normalize_netflow_to_wazuh.py
     python3 normalize_netflow_to_wazuh.py --input flows.txt --output /var/log/netflow/netflow-wazuh.json
-    python3 normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/pmacct-flows.json
 
 Security Note:
     This script processes metadata only — no network payloads.
@@ -186,26 +188,19 @@ def parse_nfdump_line(line: str) -> Optional[dict]:
     byte_val  = parse_bytes(bytes_str)
 
     return {
-        "@timestamp":        ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source":            "netflow",
-        "collector.name":    COLLECTOR_NAME,
-        "exporter.ip":       EXPORTER_IP,
-        "flow.protocol":     proto.upper(),
-        "source.ip":         src_ip,
-        "source.port":       src_port,
-        "destination.ip":    dst_ip,
-        "destination.port":  dst_port,
-        "network.bytes":     byte_val,
-        "network.packets":   int(packets),
-        "event.duration":    float(duration),
-        "tcp.flags":         flags,
-        "flow.direction":    direction,
-        "internal.src":      is_internal(src_ip),
-        "internal.dst":      is_internal(dst_ip),
-        "service.name":      service,
-        "event.type":        "network",
-        "event.category":    "network_traffic",
-        "anomaly.tags":      [],
+        "@timestamp":  ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "netflow":     "true",
+        "collector":   {"name": COLLECTOR_NAME},
+        "exporter":    {"ip": EXPORTER_IP},
+        "source":      {"ip": src_ip, "port": src_port},
+        "destination": {"ip": dst_ip, "port": dst_port},
+        "flow":        {"protocol": proto.upper(), "direction": direction},
+        "network":     {"bytes": byte_val, "packets": int(packets)},
+        "event":       {"duration": float(duration), "type": "network", "category": "network_traffic"},
+        "tcp":         {"flags": flags},
+        "internal":    {"src": is_internal(src_ip), "dst": is_internal(dst_ip)},
+        "service":     {"name": service},
+        "anomaly":     {"tags": []},
     }
 
 
@@ -224,33 +219,33 @@ def parse_pmacct_record(record: dict) -> Optional[dict]:
     ts_start = record.get("timestamp_start", datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     # Protocol number to name
-    proto_map = {"6": "TCP", "17": "UDP", "1": "ICMP", "47": "GRE", "50": "ESP"}
-    proto_name = proto_map.get(proto, f"PROTO{proto}")
+    # Handles both numeric strings ("6") and name strings ("tcp") from pmacctd
+    proto_map = {
+        "6": "TCP", "17": "UDP", "1": "ICMP", "47": "GRE", "50": "ESP",
+        "2": "IGMP", "58": "ICMPv6", "89": "OSPF", "132": "SCTP",
+        "tcp": "TCP", "udp": "UDP", "icmp": "ICMP", "igmp": "IGMP",
+        "gre": "GRE", "esp": "ESP", "icmpv6": "ICMPv6",
+        "ospf": "OSPF", "sctp": "SCTP",
+    }
+    proto_name = proto_map.get(proto.lower() if proto.isalpha() else proto, f"PROTO{proto}")
 
     direction = determine_direction(src_ip, dst_ip)
     service   = get_service_name(dst_port, proto_name)
 
     return {
-        "@timestamp":       ts_start if "T" in ts_start else ts_start,
-        "source":           "netflow",
-        "collector.name":   COLLECTOR_NAME,
-        "exporter.ip":      EXPORTER_IP,
-        "flow.protocol":    proto_name,
-        "source.ip":        src_ip,
-        "source.port":      src_port,
-        "destination.ip":   dst_ip,
-        "destination.port": dst_port,
-        "network.bytes":    bytes_,
-        "network.packets":  packets,
-        "event.duration":   0.0,
-        "tcp.flags":        "",
-        "flow.direction":   direction,
-        "internal.src":     is_internal(src_ip),
-        "internal.dst":     is_internal(dst_ip),
-        "service.name":     service,
-        "event.type":       "network",
-        "event.category":   "network_traffic",
-        "anomaly.tags":     [],
+        "@timestamp":  ts_start if "T" in ts_start else ts_start,
+        "netflow":     "true",
+        "collector":   {"name": COLLECTOR_NAME},
+        "exporter":    {"ip": EXPORTER_IP},
+        "source":      {"ip": src_ip, "port": src_port},
+        "destination": {"ip": dst_ip, "port": dst_port},
+        "flow":        {"protocol": proto_name, "direction": direction},
+        "network":     {"bytes": bytes_, "packets": packets},
+        "event":       {"duration": 0.0, "type": "network", "category": "network_traffic"},
+        "tcp":         {"flags": ""},
+        "internal":    {"src": is_internal(src_ip), "dst": is_internal(dst_ip)},
+        "service":     {"name": service},
+        "anomaly":     {"tags": []},
     }
 
 
@@ -264,7 +259,7 @@ def main():
     parser.add_argument("--output", "-o", help="Output file (default: stdout)")
     args = parser.parse_args()
 
-    out_stream = open(args.output, "a") if args.output else sys.stdout
+    out_stream = open(args.output, "w") if args.output else sys.stdout
     processed = 0
     errors = 0
 

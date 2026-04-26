@@ -8,20 +8,25 @@
 |-------|-------------|
 | @timestamp | Event time |
 | agent.name | Collector host |
-| data.source.ip | Source IP |
-| data.source.port | Source port |
-| data.destination.ip | Destination IP |
-| data.destination.port | Destination port |
-| data.flow.protocol | TCP/UDP/ICMP |
-| data.flow.direction | Flow direction |
-| data.network.bytes | Bytes transferred |
-| data.network.packets | Packet count |
-| data.event.duration | Duration (seconds) |
-| data.service.name | Service name |
-| data.anomaly.tags | Anomaly tags |
+| source.ip | Source IP |
+| source.port | Source port |
+| destination.ip | Destination IP |
+| destination.port | Destination port |
+| flow.protocol | TCP/UDP/ICMP/IGMP |
+| flow.direction | Flow direction |
+| network.bytes | Bytes transferred |
+| network.packets | Packet count |
+| event.duration | Duration (seconds) |
+| service.name | Service name |
+| anomaly.tags | Anomaly tags |
 | rule.id | Rule ID |
 | rule.level | Rule severity level |
 | rule.description | Rule description |
+
+> **Note:** Fields above do NOT use the `data.` prefix. With `log_format: json` in
+> the Wazuh Agent localfile config, all JSON fields are decoded directly without prefix.
+> In older documentation you may see `data.source.ip` etc — those are incorrect for
+> this setup and will not match in filters or visualizations.
 
 ## Common Filter Combinations
 
@@ -36,14 +41,23 @@ rule.groups:network_anomaly
 rule.groups:netflow AND rule.level:>=9
 
 # Internal east-west traffic
-data.flow.direction:internal_to_internal
+flow.direction:internal_to_internal
 
 # Outbound large transfers
-data.flow.direction:internal_to_external AND data.network.bytes:>10000000
+flow.direction:internal_to_external AND network.bytes:>10000000
 
 # SMB lateral movement candidates
-data.destination.port:445 AND data.flow.direction:internal_to_internal
+destination.port:445 AND flow.direction:internal_to_internal
 
 # DNS anomalies
 rule.id:117005
+
+# Port scan
+rule.id:117001
+
+# Beaconing / C2
+rule.id:117003
+
+# High outbound / exfiltration
+rule.id:117002
 ```

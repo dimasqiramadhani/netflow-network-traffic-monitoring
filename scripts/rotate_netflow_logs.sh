@@ -1,27 +1,36 @@
 #!/usr/bin/env bash
-# rotate_netflow_logs.sh — Rotate NetFlow JSON log
+# rotate_netflow_logs.sh — Archive NetFlow raw logs
+# Project: Network Flow Monitoring and Anomaly Detection with Wazuh
+# Author:  Dimas Qi Ramadhani
+#
+# CATATAN: Script ini untuk mengarsipkan netflow-raw.json (output pmacctd)
+# yang terus-menerus di-overwrite oleh pmacctd setiap 60 detik.
+#
+# netflow-wazuh.json (output normalizer) TIDAK perlu di-rotate karena
+# normalizer sudah overwrite file itu setiap menit via cron.
+#
+# Jalankan script ini via cron harian jika ingin menyimpan arsip raw flows:
+# 0 0 * * * bash /path/to/rotate_netflow_logs.sh
 
 [[ -f ".env" ]] && source ".env"
 
-LOG_FILE="${NETFLOW_OUTPUT_LOG:-/var/log/netflow/netflow-wazuh.json}"
-LOG_DIR="$(dirname "$LOG_FILE")"
+RAW_FILE="${NETFLOW_RAW_OUTPUT:-/var/log/netflow/netflow-raw.json}"
+LOG_DIR="$(dirname "$RAW_FILE")"
 KEEP_DAYS=7
+ARCHIVE_DIR="$LOG_DIR/archive"
 
-echo "Rotating NetFlow logs in $LOG_DIR (keeping ${KEEP_DAYS} days)..."
+mkdir -p "$ARCHIVE_DIR"
 
-# Compress yesterday's log if it exists as a rotated file
-YESTERDAY="$(date -d 'yesterday' '+%Y-%m-%d')"
-ROTATED="$LOG_DIR/netflow-wazuh-$YESTERDAY.json"
+# Archive current raw file dengan timestamp
+ARCHIVE_NAME="netflow-raw-$(date '+%Y-%m-%d-%H%M').json"
+if [[ -f "$RAW_FILE" && -s "$RAW_FILE" ]]; then
+    cp "$RAW_FILE" "$ARCHIVE_DIR/$ARCHIVE_NAME"
+    gzip "$ARCHIVE_DIR/$ARCHIVE_NAME"
+    echo "✅ Archived: $ARCHIVE_DIR/$ARCHIVE_NAME.gz"
+else
+    echo "[INFO] Raw file kosong atau tidak ada, skip archiving"
+fi
 
-[[ -f "$ROTATED" ]] && gzip "$ROTATED" && echo "✅ Compressed: $ROTATED.gz"
-
-# Remove logs older than KEEP_DAYS
-find "$LOG_DIR" -name "netflow-wazuh-*.json.gz" -mtime +$KEEP_DAYS -delete
-echo "✅ Removed compressed logs older than $KEEP_DAYS days"
-
-# Copy current log to dated archive (non-destructive)
-cp "$LOG_FILE" "$LOG_DIR/netflow-wazuh-$(date '+%Y-%m-%d').json" 2>/dev/null
-
-# Truncate current log (Wazuh will resume from end — safe for inode tracking)
-> "$LOG_FILE"
-echo "✅ Current log truncated (Wazuh will resume from end)"
+# Hapus arsip lebih dari KEEP_DAYS hari
+find "$ARCHIVE_DIR" -name "netflow-raw-*.json.gz" -mtime "+$KEEP_DAYS" -delete
+echo "✅ Removed archives older than $KEEP_DAYS days"

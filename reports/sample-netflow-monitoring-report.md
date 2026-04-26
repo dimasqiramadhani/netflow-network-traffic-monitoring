@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-This report documents a lab-based deployment of NetFlow-based network monitoring integrated with Wazuh. Flow records were collected from a lab Linux host using softflowd, normalized to Wazuh-compatible JSON, and classified by custom detection rules. Five anomaly scenarios were generated and validated: port scanning, high outbound traffic, beaconing pattern, lateral movement flows, and suspicious DNS volume. All 9 custom rules (117001–117009) were validated successfully.
+This report documents a lab-based deployment of NetFlow-based network monitoring integrated with Wazuh. Flow records were collected directly from a lab Linux host network interface using pmacctd, normalized to Wazuh-compatible JSON, and classified by custom detection rules. Five anomaly scenarios were generated and validated: port scanning, high outbound traffic, beaconing pattern, lateral movement flows, and suspicious DNS volume. All 9 custom rules (117001–117009) were validated successfully.
 
 ---
 
@@ -16,8 +16,7 @@ This report documents a lab-based deployment of NetFlow-based network monitoring
 | Item | Details |
 |------|---------|
 | Network | Lab 192.168.56.0/24 (RFC documentation range) |
-| Flow Exporter | softflowd on lab-collector-01 |
-| Collector | nfcapd (nfdump) |
+| Flow Collector | pmacctd on lab-collector-01 (direct interface capture) |
 | Wazuh Agent | lab-collector-01 (Ubuntu 24.04) |
 | Custom Rules | 117001–117009 |
 
@@ -29,7 +28,7 @@ This report documents a lab-based deployment of NetFlow-based network monitoring
 |-----------|---------|
 | Wazuh Manager | OVA v4.x |
 | Ubuntu 24.04 | lab-collector-01 |
-| nfcapd | Listening UDP :2055 |
+| pmacctd | Direct capture on enp1s0, flush every 60s |
 | Normalizer | normalize_netflow_to_wazuh.py |
 | Anomaly Detector | detect_flow_anomalies.py |
 
@@ -38,7 +37,7 @@ This report documents a lab-based deployment of NetFlow-based network monitoring
 ## 4. Flow Collection Method
 
 ```bash
-nfcapd → /var/cache/nfdump/ → nfdump export → normalize → anomaly detect → /var/log/netflow/netflow-wazuh.json → Wazuh Agent
+pmacctd (enp1s0) → /var/log/netflow/netflow-raw.json → normalize → /var/log/netflow/netflow-wazuh.json → Wazuh Agent
 ```
 
 ---

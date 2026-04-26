@@ -1,22 +1,59 @@
 {
-  "_comment": "DUMMY DATA — Sample Wazuh alert for rule 117001 (port scan)",
+  "_comment": "DUMMY DATA \u2014 Sample Wazuh alert for rule 117001 (port scan)",
   "timestamp": "2026-04-25T10:00:05.000+0000",
   "rule": {
-    "id": "117001", "level": 9,
-    "description": "NetFlow: Possible port scanning from 192.168.56.20 — multiple destination ports detected",
-    "groups": ["netflow", "network_anomaly", "port_scan"],
-    "mitre": {"id": ["T1046"]}
+    "id": "117001",
+    "level": 9,
+    "description": "NetFlow: Possible port scanning activity detected \u2014 multiple destination ports from one source",
+    "groups": [
+      "netflow",
+      "network_anomaly",
+      "port_scan"
+    ],
+    "mitre": {
+      "id": [
+        "T1046"
+      ]
+    }
   },
-  "agent": {"id": "007", "name": "lab-collector-01"},
+  "agent": {
+    "id": "007",
+    "name": "lab-collector-01"
+  },
   "data": {
-    "source": "netflow", "source.ip": "192.168.56.20",
-    "destination.ip": "192.168.56.30",
-    "destination.port": "22",
-    "flow.protocol": "TCP", "flow.direction": "internal_to_internal",
-    "network.bytes": 60, "network.packets": 1,
-    "event.duration": 0.001, "tcp.flags": "SYN",
-    "service.name": "SSH",
-    "anomaly.tags": ["possible_port_scan"]
+    "source": {
+      "ip": "192.168.56.20",
+      "port": "48739"
+    },
+    "destination": {
+      "ip": "192.168.56.30",
+      "port": "22"
+    },
+    "flow": {
+      "protocol": "TCP",
+      "direction": "internal_to_internal"
+    },
+    "network": {
+      "bytes": 60,
+      "packets": 1
+    },
+    "event": {
+      "duration": 0.001,
+      "type": "network",
+      "category": "network_traffic"
+    },
+    "tcp": {
+      "flags": "SYN"
+    },
+    "service": {
+      "name": "SSH"
+    },
+    "anomaly": {
+      "tags": [
+        "possible_port_scan"
+      ]
+    },
+    "netflow": "true"
   },
   "analyst_notes": "Port scan pattern: 192.168.56.20 connected to 25+ unique ports on 192.168.56.30 within 60 seconds. Investigate: authorized vulnerability scan? EDR/endpoint logs on source host? Network access policy?"
 }
