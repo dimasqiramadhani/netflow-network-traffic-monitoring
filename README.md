@@ -40,9 +40,8 @@ NetFlow doesn't capture packet payloads — it captures **communication metadata
 ## 🏗️ Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     INTERNET(["🌐 Internet\nExternal Traffic"])
-    ANALYST(["🔍 Analyst\nThreat Hunting"])
 
     subgraph VM2["💻 VM 2 — NetFlow Collector Host"]
         direction TB
@@ -69,6 +68,8 @@ flowchart LR
         MANAGER -->|"index"| INDEXER
         INDEXER --> DASHBOARD
     end
+
+    ANALYST(["🔍 Analyst\nThreat Hunting"])
 
     INTERNET -->|"inbound/outbound"| NIC
     AGENT -->|"port 1514"| MANAGER
