@@ -40,36 +40,39 @@ NetFlow doesn't capture packet payloads — it captures **communication metadata
 ## 🏗️ Architecture
 
 ```mermaid
-flowchart TD
-    NIC["🖧 Network Interface\nenp1s0"]
+flowchart LR
+    INTERNET(["🌐 Internet\nExternal Traffic"])
+    ANALYST(["🔍 Analyst\nThreat Hunting"])
 
-    subgraph VM2["VM 2 — NetFlow Collector Host (Ubuntu)"]
+    subgraph VM2["💻 VM 2 — NetFlow Collector Host"]
         direction TB
-        PMACCT["pmacctd\ndirect packet capture"]
-        RAW["/var/log/netflow/\nnetflow-raw.json"]
-        NORM["normalize_netflow_to_wazuh.py\ncron — every 1 min"]
-        WAZUH_JSON["/var/log/netflow/\nnetflow-wazuh.json"]
-        AGENT["Wazuh Agent\nlocalfile · log_format: json"]
+        NIC[/"enp1s0\nNetwork Interface"/]
+        PMACCT[["pmacctd\nDirect Capture"]]
+        RAW[("netflow-raw.json\n/var/log/netflow/")]
+        NORM[["normalize_netflow_to_wazuh.py\nCron · every 1 min"]]
+        WAZUH_JSON[("netflow-wazuh.json\n/var/log/netflow/")]
+        AGENT["Wazuh Agent\nlog_format: json"]
 
-        PMACCT -->|"flush every 60s"| RAW
+        NIC -->|"live packets"| PMACCT
+        PMACCT -->|"flush 60s"| RAW
         RAW --> NORM
         NORM -->|"overwrite"| WAZUH_JSON
         WAZUH_JSON --> AGENT
     end
 
-    subgraph VM1["VM 1 — Wazuh Server (All-in-One)"]
+    subgraph VM1["🖥️ VM 1 — Wazuh Server All-in-One"]
         direction TB
-        MANAGER["Wazuh Manager\nDecoder · Rules 117000–117009"]
-        INDEXER["Wazuh Indexer\nOpenSearch"]
+        MANAGER["Wazuh Manager\nDecoder + Rules 117000–117009"]
+        INDEXER[("Wazuh Indexer\nOpenSearch")]
         DASHBOARD["Wazuh Dashboard\nrule.groups:netflow"]
 
-        MANAGER -->|"index alerts"| INDEXER
+        MANAGER -->|"index"| INDEXER
         INDEXER --> DASHBOARD
     end
 
-    NIC -->|"live traffic"| PMACCT
-    AGENT -->|"events · port 1514"| MANAGER
-    DASHBOARD --> ANALYST["🔍 Analyst\nThreat Hunting · Investigation"]
+    INTERNET -->|"inbound/outbound"| NIC
+    AGENT -->|"port 1514"| MANAGER
+    DASHBOARD --> ANALYST
 ```
 
 ---
@@ -107,8 +110,8 @@ bytes=48291  packets=42  duration=12.4s
 
 ## ⚙️ Requirements
 
-- **VM 1:** Ubuntu Server 22.04 (All-in-One: Manager + Indexer + Dashboard)
-- **VM 2:** Ubuntu Server 22.04 (NetFlow Collector Host)
+- **VM 1:** Wazuh Server v4.x (All-in-One: Manager + Indexer + Dashboard)
+- **VM 2:** Ubuntu Server 20.04/22.04 (NetFlow Collector Host)
   - Wazuh Agent v4.x (same version as server)
   - pmacct (pmacctd)
   - Python 3.8+
@@ -171,7 +174,28 @@ cat /var/log/netflow/netflow-raw.json | head -3
 # Harus muncul JSON dengan ip_src, ip_dst, ip_proto, packets, bytes
 ```
 
-#### Step 4 — Konfigurasi Wazuh Agent localfile
+#### Step 4 — Konfigurasi INTERNAL_NETWORKS
+
+Normalizer menggunakan `INTERNAL_NETWORKS` untuk menentukan `flow.direction`.
+Sesuaikan dengan subnet IP lab lo — cek IP VM 2 dengan `ip a`.
+
+```bash
+# Cek IP aktual VM 2
+ip a | grep "inet " | grep -v "127.0.0"
+# Contoh output: inet 160.22.251.111/23
+
+# Set INTERNAL_NETWORKS sesuai subnet — contoh jika IP 160.22.x.x/23
+export INTERNAL_NETWORKS="160.22.250.0/23,192.168.56.0/24"
+
+# Atau buat file .env di folder project
+echo 'INTERNAL_NETWORKS=160.22.250.0/23,192.168.56.0/24' > .env
+```
+
+> **Penting:** Jika INTERNAL_NETWORKS tidak dikonfigurasi dengan subnet yang benar,
+> semua traffic akan teklasifikasi sebagai `external_to_external` dan rule 117004
+> (lateral movement) tidak akan pernah fired pada traffic nyata.
+
+#### Step 5 — Konfigurasi Wazuh Agent localfile
 
 Tambahkan ke `/var/ossec/etc/ossec.conf` sebelum `</ossec_config>` terakhir:
 
@@ -186,20 +210,20 @@ Tambahkan ke `/var/ossec/etc/ossec.conf` sebelum `</ossec_config>` terakhir:
 sudo systemctl restart wazuh-agent
 ```
 
-#### Step 5 — Jalankan Normalizer
+#### Step 6 — Jalankan Normalizer
 
 ```bash
 python3 scripts/normalize_netflow_to_wazuh.py \
   --pmacct /var/log/netflow/netflow-raw.json \
   --output /var/log/netflow/netflow-wazuh.json
 
-# Verifikasi
+# Verifikasi format nested JSON
 head -1 /var/log/netflow/netflow-wazuh.json | \
-  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flow.protocol'], d['source.ip'])"
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flow']['protocol'], d['source']['ip'])"
 # Harus output: TCP x.x.x.x (bukan PROTOtcp)
 ```
 
-#### Step 6 — Setup Cron Otomatis
+#### Step 7 — Setup Cron Otomatis
 
 ```bash
 bash scripts/setup_cron.sh
@@ -235,7 +259,34 @@ sudo systemctl status wazuh-manager | grep Active
 # Harus: active (running)
 ```
 
-#### Step 4 — Validasi dengan wazuh-logtest
+#### Step 4 — Apply Index Template (untuk numeric fields)
+
+Supaya field `data.network.bytes` dan `data.network.packets` bisa di-aggregate
+(Sum/Avg) di Wazuh Dashboard:
+
+```bash
+curl -k -u admin:<password> \
+  -X PUT "https://localhost:9200/_index_template/wazuh-netflow-numeric" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "index_patterns": ["wazuh-alerts-*"],
+    "priority": 200,
+    "template": {
+      "mappings": {
+        "properties": {
+          "data.network.bytes":   {"type": "long"},
+          "data.network.packets": {"type": "long"}
+        }
+      }
+    }
+  }'
+```
+
+Output yang diharapkan: `{"acknowledged":true}`
+
+> Template berlaku untuk index **baru** (besok dan seterusnya). Index hari ini tidak berubah.
+
+#### Step 5 — Validasi dengan wazuh-logtest
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
@@ -253,8 +304,11 @@ Copy output satu baris tersebut, paste ke prompt wazuh-logtest. Output yang diha
 ```
 **Phase 2: Completed decoding.
         name: 'json'
-        source: 'netflow'
-        anomaly.tags: '['possible_port_scan']'
+        netflow: 'true'
+        source: '{"ip": "192.168.56.x", "port": 48739}'
+        destination: '{"ip": "192.168.56.x", "port": 47775}'
+        flow: '{"protocol": "TCP", "direction": "internal_to_internal"}'
+        anomaly: '{"tags": ["possible_port_scan"]}'
 
 **Phase 3: Completed filtering (rules).
         id: '117001'
@@ -391,6 +445,9 @@ netflow-network-traffic-monitoring/
 | `flow.protocol: PROTOtcp` | proto_map tidak handle string | Deploy normalizer versi terbaru |
 | nfcapd "No matched flows" | Cloud VM hypervisor filtering | Gunakan pmacctd bukan nfcapd |
 | Localfile duplicate warning | Entry ossec.conf dobel | Hapus salah satu entry |
+| `source.ip` tidak muncul di dashboard | Flat dot-notation JSON conflict | Deploy normalizer versi terbaru (nested JSON) |
+| Semua traffic `external_to_external` | INTERNAL_NETWORKS tidak dikonfigurasi | Set env var sesuai subnet lab, lihat Step 4 |
+| `data.network.bytes` tidak bisa di-Sum | Field ter-index sebagai keyword | Apply index template, lihat Step 4 VM1 |
 
 Lihat `docs/17-troubleshooting.md` untuk detail lengkap.
 
@@ -413,7 +470,7 @@ Lab and portfolio use only. All IP addresses, hostnames, and flow data are ficti
 
 ## 👤 Author
 
-**Dimasqi Ramadhani** — Cybersecurity Engineer | Network Security · SIEM · Detection Engineering  
+**Dimas Qi Ramadhani** — Cybersecurity Engineer | Network Security · SIEM · Detection Engineering  
 GitHub: [@dimasqiramadhani](https://github.com/dimasqiramadhani)  
 Email: dimasqiramadhani@gmail.com  
 LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)

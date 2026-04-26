@@ -8,8 +8,17 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 NORMALIZER="$PROJECT_DIR/scripts/normalize_netflow_to_wazuh.py"
 RAW_INPUT="${NETFLOW_RAW_OUTPUT:-/var/log/netflow/netflow-raw.json}"
 WAZUH_OUTPUT="/var/log/netflow/netflow-wazuh.json"
+ENV_FILE="$PROJECT_DIR/.env"
 
-CRON_LINE="* * * * * rm -f $WAZUH_OUTPUT && python3 $NORMALIZER --pmacct $RAW_INPUT --output $WAZUH_OUTPUT"
+# Source .env untuk INTERNAL_NETWORKS jika ada
+ENV_PREFIX=""
+if [[ -f "$ENV_FILE" ]]; then
+    # Baca INTERNAL_NETWORKS dari .env untuk di-pass ke cron
+    INET=$(grep "^INTERNAL_NETWORKS=" "$ENV_FILE" | cut -d= -f2-)
+    [[ -n "$INET" ]] && ENV_PREFIX="INTERNAL_NETWORKS=$INET "
+fi
+
+CRON_LINE="* * * * * ${ENV_PREFIX}rm -f $WAZUH_OUTPUT && python3 $NORMALIZER --pmacct $RAW_INPUT --output $WAZUH_OUTPUT"
 
 # Check if already exists
 if sudo crontab -l 2>/dev/null | grep -qF "$NORMALIZER"; then

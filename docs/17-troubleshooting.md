@@ -329,3 +329,78 @@ head -1 /var/log/netflow/netflow-wazuh.json | python3 -m json.tool | grep -A2 '"
 # "source": {
 #     "ip": "x.x.x.x",
 ```
+
+---
+
+## data.network.bytes Tidak Bisa Di-aggregate (Sum) di Dashboard
+
+**Gejala:** Field `data.network.bytes` tidak muncul di dropdown aggregation Sum di Visualize,
+atau muncul tapi tidak bisa dipilih untuk Sum/Avg.
+
+**Penyebab:** Wazuh Indexer menyimpan field sebagai tipe `keyword` (string) bukan `long` (number).
+Field numeric perlu di-define di index template sebelum data masuk.
+
+**Fix — Apply index template (jalankan di VM 1):**
+
+```bash
+curl -k -u admin:<password>   -X PUT "https://localhost:9200/_index_template/wazuh-netflow-numeric"   -H "Content-Type: application/json"   -d '{
+    "index_patterns": ["wazuh-alerts-*"],
+    "priority": 200,
+    "template": {
+      "mappings": {
+        "properties": {
+          "data.network.bytes":   {"type": "long"},
+          "data.network.packets": {"type": "long"}
+        }
+      }
+    }
+  }'
+```
+
+Template ini berlaku untuk **index baru** yang dibuat setelah template di-apply (besok dan seterusnya).
+Index hari ini tidak bisa diubah.
+
+Setelah index baru terbentuk:
+1. **Stack Management → Index Patterns → wazuh-alerts-* → Refresh field list**
+2. Coba lagi Sum aggregation pada `data.network.bytes`
+
+---
+
+## flow.direction Selalu external_to_external pada Traffic Nyata
+
+**Gejala:** Semua traffic dari pmacctd ter-klasifikasi sebagai `external_to_external`,
+rule 117004 tidak pernah fired.
+
+**Penyebab:** `INTERNAL_NETWORKS` di normalizer masih menggunakan default `192.168.56.0/24`
+tapi IP aktual VM lo berada di subnet yang berbeda (misalnya `160.22.250.0/23`).
+
+**Fix:**
+
+```bash
+# Cek subnet IP VM lo
+ip a | grep "inet " | grep -v 127
+
+# Set environment variable sebelum jalankan normalizer
+export INTERNAL_NETWORKS="160.22.250.0/23"
+
+# Atau tambahkan ke .env di folder project
+echo 'INTERNAL_NETWORKS=160.22.250.0/23' >> .env
+
+# Regenerate netflow-wazuh.json
+rm -f /var/log/netflow/netflow-wazuh.json
+python3 scripts/normalize_netflow_to_wazuh.py \
+  --pmacct /var/log/netflow/netflow-raw.json \
+  --output /var/log/netflow/netflow-wazuh.json
+
+# Verifikasi flow.direction sudah benar
+head -5 /var/log/netflow/netflow-wazuh.json | \
+  python3 -c "import sys,json; [print(json.loads(l)['flow']['direction']) for l in sys.stdin]"
+```
+
+Juga update cron supaya env var ikut terbawa:
+
+```bash
+sudo crontab -e
+# Ubah baris cron menjadi:
+# * * * * * INTERNAL_NETWORKS=160.22.250.0/23 rm -f /var/log/netflow/netflow-wazuh.json && python3 /path/to/normalize_netflow_to_wazuh.py --pmacct /var/log/netflow/netflow-raw.json --output /var/log/netflow/netflow-wazuh.json
+```

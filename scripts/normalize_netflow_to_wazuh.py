@@ -211,8 +211,8 @@ def parse_pmacct_record(record: dict) -> Optional[dict]:
     """Normalize a pmacct JSON record."""
     src_ip   = record.get("ip_src", "")
     dst_ip   = record.get("ip_dst", "")
-    src_port = str(record.get("port_src", "0"))
-    dst_port = str(record.get("port_dst", "0"))
+    src_port = int(record.get("port_src", 0))
+    dst_port = int(record.get("port_dst", 0))
     proto    = str(record.get("ip_proto", "0"))
     packets  = int(record.get("packets", 0))
     bytes_   = int(record.get("bytes", 0))
@@ -224,8 +224,9 @@ def parse_pmacct_record(record: dict) -> Optional[dict]:
         "6": "TCP", "17": "UDP", "1": "ICMP", "47": "GRE", "50": "ESP",
         "2": "IGMP", "58": "ICMPv6", "89": "OSPF", "132": "SCTP",
         "tcp": "TCP", "udp": "UDP", "icmp": "ICMP", "igmp": "IGMP",
-        "gre": "GRE", "esp": "ESP", "icmpv6": "ICMPv6",
-        "ospf": "OSPF", "sctp": "SCTP",
+        "gre": "GRE", "esp": "ESP", "icmpv6": "ICMPv6", "ipv6-icmp": "ICMPv6",
+        "ospf": "OSPF", "sctp": "SCTP", "ipv6": "IPv6", "ah": "AH",
+        "pim": "PIM", "vrrp": "VRRP",
     }
     proto_name = proto_map.get(proto.lower() if proto.isalpha() else proto, f"PROTO{proto}")
 

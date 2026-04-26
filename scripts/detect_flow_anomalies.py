@@ -135,7 +135,7 @@ def detect_suspicious_dns(event: dict) -> bool:
     proto   = event.get("flow", {}).get("protocol", "")
     dport   = event.get("destination", {}).get("port", "")
 
-    if not (service == "DNS" or (proto == "UDP" and dport == "53")):
+    if not (service == "DNS" or (proto == "UDP" and str(dport) == "53")):
         return False
 
     src = event.get("source", {}).get("ip", "")
