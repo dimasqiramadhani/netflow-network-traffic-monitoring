@@ -6,12 +6,12 @@
 
 ## Detection Summary
 
-| Field | Value |
-|-------|-------|
-| Alert ID | NETFLOW-LAB-2026-001 |
+| Field          | Value                |
+|----------------|----------------------|
+| Alert ID       | NETFLOW-LAB-2026-001 |
 | Detection Time | 2026-04-25T10:00:52Z |
-| Rule | 117002 |
-| Anomaly Type | High Outbound Bytes |
+| Rule           | 117002               |
+| Anomaly Type   | High Outbound Bytes  |
 
 ## Source Host
 
@@ -23,13 +23,13 @@
 
 ## Flow Metadata
 
-| Field | Value |
-|-------|-------|
-| Protocol | TCP |
-| Bytes | 52,428,800 (50 MB) |
-| Packets | 420 |
-| Duration | 45.0 seconds |
-| Service | HTTPS |
+| Field     | Value                |
+|-----------|----------------------|
+| Protocol  | TCP                  |
+| Bytes     | 52,428,800 (50 MB)   |
+| Packets   | 420                  |
+| Duration  | 45.0 seconds         |
+| Service   | HTTPS                |
 | Direction | internal_to_external |
 
 ## Anomaly Type

@@ -1,7 +1,7 @@
 # Incident Investigation Report — Beaconing Pattern
 
 **Incident ID:** NETFLOW-LAB-2026-002  
-**Author:** Dimas Qi Ramadhani | **Status:** Closed — Lab Test  
+**Author:** Dimasqi Ramadhani | **Status:** Closed — Lab Test  
 
 ---
 
@@ -13,13 +13,13 @@ Rule 117003 triggered multiple times for 192.168.56.30 — possible beaconing pa
 
 ## 2. Alert Details
 
-| Field | Value |
-|-------|-------|
-| Rule | 117003 |
-| Level | 10 |
-| Anomaly | possible_beaconing |
+| Field      | Value                |
+|------------|----------------------|
+| Rule       | 117003               |
+| Level      | 10                   |
+| Anomaly    | possible_beaconing   |
 | First seen | 2026-04-25T10:00:00Z |
-| Last seen | 2026-04-25T10:35:00Z |
+| Last seen  | 2026-04-25T10:35:00Z |
 
 ---
 
@@ -37,13 +37,13 @@ Rule 117003 triggered multiple times for 192.168.56.30 — possible beaconing pa
 
 ## 5. Timeline
 
-| Time | Event |
-|------|-------|
-| T+0 | First connection, 502 bytes, 1.1s |
+| Time  | Event                              |
+|-------|------------------------------------|
+| T+0   | First connection, 502 bytes, 1.1s  |
 | T+300 | Second connection, 498 bytes, 0.9s |
-| T+600 | Third connection, 511 bytes, 1.2s |
+| T+600 | Third connection, 511 bytes, 1.2s  |
 | T+900 | Fourth connection, 505 bytes, 1.0s |
-| ... | (8 total connections) |
+| ...   | (8 total connections)              |
 
 ---
 

@@ -26,23 +26,23 @@
 
 ### Step 5: Correlate with Other Logs
 
-| Flow Anomaly | Correlate With |
-|-------------|---------------|
-| Port scan | Firewall deny logs, Wazuh/EDR on target |
-| High outbound | Proxy logs, DNS logs, DLP logs |
-| Beaconing | Endpoint process tree, DNS query logs |
+| Flow Anomaly     | Correlate With                           |
+|------------------|------------------------------------------|
+| Port scan        | Firewall deny logs, Wazuh/EDR on target  |
+| High outbound    | Proxy logs, DNS logs, DLP logs           |
+| Beaconing        | Endpoint process tree, DNS query logs    |
 | Lateral movement | Windows Security Event 4624/4625, Sysmon |
-| High DNS volume | DNS resolver logs, query names |
+| High DNS volume  | DNS resolver logs, query names           |
 
 ### Step 6: Response Decision
 
-| Confidence | Finding | Action |
-|-----------|---------|--------|
-| High | Confirmed C2 beaconing | Isolate host, block destination |
-| High | Data exfiltration confirmed | Incident response activation |
-| Medium | Suspected lateral movement | Investigate auth logs, alert owner |
-| Low | Authorized scanner detected | Tune rule, add to allowlist |
-| Low | Backup job (high bytes) | Add to exception list |
+| Confidence | Finding                     | Action                             |
+|------------|-----------------------------|------------------------------------|
+| High       | Confirmed C2 beaconing      | Isolate host, block destination    |
+| High       | Data exfiltration confirmed | Incident response activation       |
+| Medium     | Suspected lateral movement  | Investigate auth logs, alert owner |
+| Low        | Authorized scanner detected | Tune rule, add to allowlist        |
+| Low        | Backup job (high bytes)     | Add to exception list              |
 
 ### Step 7: Document Evidence
 

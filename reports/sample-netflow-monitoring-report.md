@@ -13,24 +13,24 @@ This report documents a lab-based deployment of NetFlow-based network monitoring
 
 ## 2. Scope
 
-| Item | Details |
-|------|---------|
-| Network | Lab 192.168.56.0/24 (RFC documentation range) |
+| Item           | Details                                                |
+|----------------|--------------------------------------------------------|
+| Network        | Lab 192.168.56.0/24 (RFC documentation range)          |
 | Flow Collector | pmacctd on lab-collector-01 (direct interface capture) |
-| Wazuh Agent | lab-collector-01 (Ubuntu 24.04) |
-| Custom Rules | 117001–117009 |
+| Wazuh Agent    | lab-collector-01 (Ubuntu 24.04)                        |
+| Custom Rules   | 117001–117009                                          |
 
 ---
 
 ## 3. Lab Environment
 
-| Component | Details |
-|-----------|---------|
-| Wazuh Manager | OVA v4.x |
-| Ubuntu 24.04 | lab-collector-01 |
-| pmacctd | Direct capture on enp1s0, flush every 60s |
-| Normalizer | normalize_netflow_to_wazuh.py |
-| Anomaly Detector | detect_flow_anomalies.py |
+| Component        | Details                                   |
+|------------------|-------------------------------------------|
+| Wazuh Manager    | OVA v4.x                                  |
+| Ubuntu 24.04     | lab-collector-01                          |
+| pmacctd          | Direct capture on enp1s0, flush every 60s |
+| Normalizer       | normalize_netflow_to_wazuh.py             |
+| Anomaly Detector | detect_flow_anomalies.py                  |
 
 ---
 
@@ -44,15 +44,15 @@ pmacctd (enp1s0) → /var/log/netflow/netflow-raw.json → normalize → /var/lo
 
 ## 5. Detection Results
 
-| Scenario | Rule | Status | Level |
-|---------|------|--------|-------|
-| Port scan (25 ports/source) | 117001 | ✅ | 9 |
-| High outbound (>50MB) | 117002 | ✅ | 10 |
-| Beaconing (5-min interval) | 117003 | ✅ | 10 |
-| Lateral movement (SMB/RDP) | 117004 | ✅ | 10 |
-| Suspicious DNS (120 flows) | 117005 | ✅ | 8 |
-| External inbound (port 22) | 117006 | ✅ | 9 |
-| Multiple anomalies/source | 117009 | ✅ | 13 |
+| Scenario                    | Rule   | Status | Level |
+|-----------------------------|--------|--------|-------|
+| Port scan (25 ports/source) | 117001 | Done   | 9     |
+| High outbound (>50MB)       | 117002 | Done   | 10    |
+| Beaconing (5-min interval)  | 117003 | Done   | 10    |
+| Lateral movement (SMB/RDP)  | 117004 | Done   | 10    |
+| Suspicious DNS (120 flows)  | 117005 | Done   | 8     |
+| External inbound (port 22)  | 117006 | Done   | 9     |
+| Multiple anomalies/source   | 117009 | Done   | 13    |
 
 ---
 
@@ -67,13 +67,13 @@ pmacctd (enp1s0) → /var/log/netflow/netflow-raw.json → normalize → /var/lo
 
 ## 7. Recommendations
 
-| Priority | Recommendation |
-|----------|---------------|
-| P1 | Add GeoIP enrichment to destination IP fields |
-| P1 | Calibrate thresholds against real baseline |
-| P2 | Add proxy log and DNS log correlation |
-| P2 | Add alert suppression for authorized scanners |
-| P3 | Add SOAR response for high-confidence incidents |
+| Priority | Recommendation                                  |
+|----------|-------------------------------------------------|
+| P1       | Add GeoIP enrichment to destination IP fields   |
+| P1       | Calibrate thresholds against real baseline      |
+| P2       | Add proxy log and DNS log correlation           |
+| P2       | Add alert suppression for authorized scanners   |
+| P3       | Add SOAR response for high-confidence incidents |
 
 ---
 

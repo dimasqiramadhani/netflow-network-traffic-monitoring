@@ -12,11 +12,11 @@ A lab-based network security monitoring project that ingests **NetFlow/IPFIX flo
 
 Most SIEM deployments are log-centric: Windows Events, Linux syslog, application logs. NetFlow adds a complementary layer:
 
-| Traditional SIEM | + NetFlow |
-|----------------|-----------|
-| "User logged in from IP" | + "That IP also sent 50GB outbound last night" |
+| Traditional SIEM          | + NetFlow                                                                   |
+|---------------------------|-----------------------------------------------------------------------------|
+| "User logged in from IP"  | + "That IP also sent 50GB outbound last night"                              |
 | "Process created on host" | + "That host has been connecting to the same IP every 5 minutes for 3 days" |
-| "Authentication failure" | + "Followed by lateral SMB connections to 12 internal hosts" |
+| "Authentication failure"  | + "Followed by lateral SMB connections to 12 internal hosts"                |
 
 NetFlow doesn't capture packet payloads — it captures **communication metadata**: who spoke to whom, on what port, for how long, how many bytes. That's often exactly what's needed for behavioral anomaly detection.
 
@@ -28,14 +28,14 @@ NetFlow doesn't capture packet payloads — it captures **communication metadata
 
 ![Architecture Diagram](screenshots/Architecture.png "Architecture Diagram")
 
-| Component | Role |
-|-----------|------|
-| pmacctd | Captures flow records directly from network interface (primary collector) |
-| Python Normalizer | Converts pmacct JSON output to Wazuh-compatible JSON |
-| Wazuh Agent | Reads normalized JSON via localfile (`log_format: json`) |
-| Custom Decoder | Identifies NetFlow JSON events by `@timestamp` prefix |
-| Custom Rules 117000–117009 | Flow anomaly detection |
-| Wazuh Dashboard | Flow threat hunting and visualization |
+| Component                  | Role                                                                      |
+|----------------------------|---------------------------------------------------------------------------|
+| pmacctd                    | Captures flow records directly from network interface (primary collector) |
+| Python Normalizer          | Converts pmacct JSON output to Wazuh-compatible JSON                      |
+| Wazuh Agent                | Reads normalized JSON via localfile (`log_format: json`)                  |
+| Custom Decoder             | Identifies NetFlow JSON events by `@timestamp` prefix                     |
+| Custom Rules 117000–117009 | Flow anomaly detection                                                    |
+| Wazuh Dashboard            | Flow threat hunting and visualization                                     |
 
 ---
 
@@ -97,17 +97,17 @@ bytes=48291  packets=42  duration=12.4s
 
 ## 🎯 Detection Scope
 
-| Detection | Flow Indicator | MITRE | Rule |
-|-----------|---------------|-------|------|
-| Port scanning | Many dst ports from one source | T1046 | 117001 |
-| High outbound traffic | Large bytes outbound | T1041, T1567 | 117002 |
-| Beaconing | Periodic same-dst connections | T1071 | 117003 |
-| Lateral movement | Int→Int on SMB/RDP/SSH/WinRM | T1021 | 117004 |
-| Suspicious DNS flow | High UDP/53 volume | T1071.004 | 117005 |
-| External inbound sensitive | Ext→Int on admin ports | T1021 | 117006 |
-| Unusual dst port | Int→Ext on uncommon port | T1071 | 117007 |
-| DoS-like pattern | High packets to same dst | T1498 | 117008 |
-| Multiple port scan anomalies | 3+ rule 117001 alerts from same src | T1046 | 117009 |
+| Detection                    | Flow Indicator                      | MITRE        | Rule   |
+|------------------------------|-------------------------------------|--------------|--------|
+| Port scanning                | Many dst ports from one source      | T1046        | 117001 |
+| High outbound traffic        | Large bytes outbound                | T1041, T1567 | 117002 |
+| Beaconing                    | Periodic same-dst connections       | T1071        | 117003 |
+| Lateral movement             | Int→Int on SMB/RDP/SSH/WinRM        | T1021        | 117004 |
+| Suspicious DNS flow          | High UDP/53 volume                  | T1071.004    | 117005 |
+| External inbound sensitive   | Ext→Int on admin ports              | T1021        | 117006 |
+| Unusual dst port             | Int→Ext on uncommon port            | T1071        | 117007 |
+| DoS-like pattern             | High packets to same dst            | T1498        | 117008 |
+| Multiple port scan anomalies | 3+ rule 117001 alerts from same src | T1046        | 117009 |
 
 ---
 
@@ -377,13 +377,13 @@ rule.groups: netflow
 
 Filter by detection type:
 
-| Filter | Detection |
-|--------|-----------|
-| `rule.id: 117001` | Port scan |
-| `rule.id: 117002` | High outbound |
-| `rule.id: 117003` | Beaconing / C2 |
+| Filter            | Detection        |
+|-------------------|------------------|
+| `rule.id: 117001` | Port scan        |
+| `rule.id: 117002` | High outbound    |
+| `rule.id: 117003` | Beaconing / C2   |
 | `rule.id: 117004` | Lateral movement |
-| `rule.id: 117005` | Suspicious DNS |
+| `rule.id: 117005` | Suspicious DNS   |
 
 See `dashboards/visualization-guide.md` for dashboard visualization instructions.
 
@@ -440,16 +440,16 @@ netflow-network-traffic-monitoring/
 
 ## 🐛 Common Issues
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Wazuh Manager fails to start | `<type>json</type>` in decoder | Deploy latest decoder |
-| Rules 117001-117008 not firing | `data.` prefix in field names | Deploy latest rules |
-| `flow.protocol: PROTOtcp` | proto_map missing string protocols | Deploy latest normalizer |
-| nfcapd "No matched flows" | Cloud VM hypervisor packet filtering | Use pmacctd instead of nfcapd |
-| Localfile duplicate warning | Duplicate entry in ossec.conf | Remove duplicate entry |
-| `source.ip` missing in dashboard | Flat dot-notation JSON conflict | Deploy latest normalizer (nested JSON) |
-| All traffic shows `external_to_external` | INTERNAL_NETWORKS not configured | Set env var to match lab subnet, see Step 4 |
-| `data.network.bytes` not aggregatable | Field indexed as keyword not long | Apply index template, see VM1 Step 4 |
+| Symptom                                  | Cause                                | Fix                                         |
+|------------------------------------------|--------------------------------------|---------------------------------------------|
+| Wazuh Manager fails to start             | `<type>json</type>` in decoder       | Deploy latest decoder                       |
+| Rules 117001-117008 not firing           | `data.` prefix in field names        | Deploy latest rules                         |
+| `flow.protocol: PROTOtcp`                | proto_map missing string protocols   | Deploy latest normalizer                    |
+| nfcapd "No matched flows"                | Cloud VM hypervisor packet filtering | Use pmacctd instead of nfcapd               |
+| Localfile duplicate warning              | Duplicate entry in ossec.conf        | Remove duplicate entry                      |
+| `source.ip` missing in dashboard         | Flat dot-notation JSON conflict      | Deploy latest normalizer (nested JSON)      |
+| All traffic shows `external_to_external` | INTERNAL_NETWORKS not configured     | Set env var to match lab subnet, see Step 4 |
+| `data.network.bytes` not aggregatable    | Field indexed as keyword not long    | Apply index template, see VM1 Step 4        |
 
 See `docs/17-troubleshooting.md` for detailed guidance.
 

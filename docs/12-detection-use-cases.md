@@ -72,12 +72,12 @@ src=192.168.56.50  dst=8.8.8.8  dport=53  proto=UDP  bytes=200  packets=1
 
 ## MITRE ATT&CK Coverage Summary
 
-| Technique | ID | Detection |
-|-----------|-----|----------|
-| Network Service Discovery | T1046 | Port scan pattern |
-| Remote Services | T1021 | Lateral movement flows |
-| Application Layer Protocol | T1071 | Beaconing pattern |
-| DNS | T1071.004 | High DNS flow volume |
-| Exfiltration Over C2 | T1041 | High outbound bytes |
-| Exfiltration Over Web Service | T1567 | HTTP/HTTPS upload |
-| Network Denial of Service | T1498 | High packet rate |
+| Technique                     | ID        | Detection              |
+|-------------------------------|-----------|------------------------|
+| Network Service Discovery     | T1046     | Port scan pattern      |
+| Remote Services               | T1021     | Lateral movement flows |
+| Application Layer Protocol    | T1071     | Beaconing pattern      |
+| DNS                           | T1071.004 | High DNS flow volume   |
+| Exfiltration Over C2          | T1041     | High outbound bytes    |
+| Exfiltration Over Web Service | T1567     | HTTP/HTTPS upload      |
+| Network Denial of Service     | T1498     | High packet rate       |

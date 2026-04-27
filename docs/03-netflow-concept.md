@@ -12,30 +12,30 @@ When this 5-tuple (src IP, dst IP, src port, dst port, protocol) conversation en
 
 ## Common Flow Fields
 
-| Field | Description | Detection Value |
-|-------|-------------|----------------|
-| `start_time` | Flow start timestamp | Timeline analysis |
-| `end_time` | Flow end timestamp | Duration calculation |
-| `duration` | Flow duration in seconds | Long sessions, beaconing |
-| `protocol` | TCP/UDP/ICMP | Unusual protocol usage |
-| `src_ip` | Source IP address | Source attribution |
-| `src_port` | Source port | Ephemeral vs. unusual |
-| `dst_ip` | Destination IP address | External/internal |
-| `dst_port` | Destination port | Service identification |
-| `bytes` | Total bytes in flow | Exfiltration detection |
-| `packets` | Total packets | DoS, scanning patterns |
-| `tcp_flags` | SYN/ACK/FIN/RST flags | Scan detection |
-| `in_iface` | Input interface | Traffic source direction |
-| `out_iface` | Output interface | Traffic egress direction |
+| Field        | Description              | Detection Value          |
+|--------------|--------------------------|--------------------------|
+| `start_time` | Flow start timestamp     | Timeline analysis        |    
+| `end_time`   | Flow end timestamp       | Duration calculation     |
+| `duration`   | Flow duration in seconds | Long sessions, beaconing |
+| `protocol`   | TCP/UDP/ICMP             | Unusual protocol usage   |
+| `src_ip`     | Source IP address        | Source attribution       |
+| `src_port`   | Source port              | Ephemeral vs. unusual    |
+| `dst_ip`     | Destination IP address   | External/internal        |
+| `dst_port`   | Destination port         | Service identification   |
+| `bytes`      | Total bytes in flow      | Exfiltration detection   |
+| `packets`    | Total packets            | DoS, scanning patterns   |
+| `tcp_flags`  | SYN/ACK/FIN/RST flags    | Scan detection           |
+| `in_iface`   | Input interface          | Traffic source direction |
+| `out_iface`  | Output interface         | Traffic egress direction |
 
 ## NetFlow Versions
 
-| Version | Notes |
-|---------|-------|
-| NetFlow v5 | Original Cisco format — fixed fields, IPv4 only |
-| NetFlow v9 | Template-based, flexible fields, supports IPv6 |
+| Version     | Notes                                                               |
+|-------------|---------------------------------------------------------------------|
+| NetFlow v5  | Original Cisco format — fixed fields, IPv4 only                     |
+| NetFlow v9  | Template-based, flexible fields, supports IPv6                      |
 | IPFIX (v10) | IETF standard based on NetFlow v9, preferred for modern deployments |
-| sFlow | Packet sampling (not true flow) — different from NetFlow |
+| sFlow       | Packet sampling (not true flow) — different from NetFlow            |
 
 ## Why NetFlow Is Not Packet Capture
 

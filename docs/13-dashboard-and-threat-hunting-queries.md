@@ -4,61 +4,61 @@
 
 ### General NetFlow
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.groups:netflow` | All NetFlow events |
+| Filter                        | Purpose                 |
+|-------------------------------|-------------------------|
+| `rule.groups:netflow`         | All NetFlow events      |
 | `rule.groups:network_anomaly` | Detected anomalies only |
-| `rule.level:>=8` | High severity alerts |
+| `rule.level:>=8`              | High severity alerts    |
 
 ### Port Scanning
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.id:117001` | Port scan alerts |
+| Filter                            | Purpose          |
+|-----------------------------------|------------------|
+| `rule.id:117001`                  | Port scan alerts |
 | `anomaly.tags:possible_port_scan` | Tag-based filter |
 
 ### High Outbound Traffic
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.id:117002` | High outbound rule |
-| `flow.direction:internal_to_external` | Outbound flows |
-| `network.bytes:>50000000` | Large transfers |
+| Filter                                | Purpose            |
+|---------------------------------------|--------------------|
+| `rule.id:117002`                      | High outbound rule |
+| `flow.direction:internal_to_external` | Outbound flows     |
+| `network.bytes:>50000000`             | Large transfers    |
 
 ### Beaconing
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.id:117003` | Beaconing alerts |
-| `anomaly.tags:possible_beaconing` | Tag filter |
+| Filter                            | Purpose          |
+|-----------------------------------|------------------|
+| `rule.id:117003`                  | Beaconing alerts |
+| `anomaly.tags:possible_beaconing` | Tag filter       |
 
 ### Lateral Movement
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.id:117004` | Lateral movement rule |
-| `destination.port:445` | SMB traffic |
-| `destination.port:3389` | RDP traffic |
-| `destination.port:5985` | WinRM traffic |
-| `flow.direction:internal_to_internal` | East-west traffic |
+| Filter                                | Purpose               |
+|---------------------------------------|-----------------------|
+| `rule.id:117004`                      | Lateral movement rule |
+| `destination.port:445`                | SMB traffic           |
+| `destination.port:3389`               | RDP traffic           |
+| `destination.port:5985`               | WinRM traffic         |
+| `flow.direction:internal_to_internal` | East-west traffic     |
 
 ### DNS
 
-| Filter | Purpose |
-|--------|---------|
-| `rule.id:117005` | Suspicious DNS rule |
-| `destination.port:53` | DNS port |
-| `service.name:DNS` | DNS service name |
+| Filter                | Purpose             |
+|-----------------------|---------------------|
+| `rule.id:117005`      | Suspicious DNS rule |
+| `destination.port:53` | DNS port            |
+| `service.name:DNS`    | DNS service name    |
 
 ### MITRE
 
-| Filter | Technique |
-|--------|-----------|
-| `rule.mitre.id:T1046` | Network Service Discovery |
-| `rule.mitre.id:T1021` | Remote Services |
+| Filter                | Technique                  |
+|-----------------------|----------------------------|
+| `rule.mitre.id:T1046` | Network Service Discovery  |
+| `rule.mitre.id:T1021` | Remote Services            |
 | `rule.mitre.id:T1071` | Application Layer Protocol |
-| `rule.mitre.id:T1041` | Exfiltration Over C2 |
-| `rule.mitre.id:T1498` | Network Denial of Service |
+| `rule.mitre.id:T1041` | Exfiltration Over C2       |
+| `rule.mitre.id:T1498` | Network Denial of Service  |
 
 ## Combined Hunting Queries
 
