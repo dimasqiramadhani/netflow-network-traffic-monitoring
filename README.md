@@ -1,4 +1,4 @@
-# Wazuh NetFlow Monitoring PoC
+# NetfLow Network Traffic Monitoring
 
 Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and custom detection rules built on a simple two-VM architecture.
 
