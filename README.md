@@ -305,7 +305,7 @@ Refer to [docs/troubleshooting.md](docs/troubleshooting.md) for common issues in
 
 ## Known Limitations
 
-- Two-VM architecture is not designed for production scale.
+- Two VM architecture is not designed for production scale.
 - pmacctd captures traffic only from the collector VM's local interface.
 - The normalization script runs as a scheduled task (cron), not a real-time stream processor.
 - No CDB list or threat intelligence feed for IP reputation lookup.
