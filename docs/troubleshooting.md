@@ -5,77 +5,100 @@
 **Symptom:** `/var/log/netflow/netflow_raw.json` is empty or not being created.
 
 **Checks:**
-1. Verify pmacctd is running: `ps aux | grep pmacctd`
-2. Check the correct interface name in `/etc/pmacct/pmacctd.conf`: `ip link show`
-3. Ensure the log directory exists and has correct permissions: `ls -la /var/log/netflow/`
-4. Run pmacctd in foreground mode for debugging: `sudo pmacctd -f /etc/pmacct/pmacctd.conf` (remove `-D` flag)
-5. Generate test traffic: `curl -s https://example.com > /dev/null` and check if raw logs appear.
+1. Verify pmacctd is running: `ps aux | grep pmacctd | grep -v grep`
+2. Check the correct interface: `ip link show` - set `pcap_interface` accordingly
+3. Ensure the log directory exists: `ls -la /var/log/netflow/`
+4. Run in foreground for debugging: `sudo pmacctd -f /etc/pmacct/pmacctd.conf` (remove `-D` from daemonize or run without config's daemonize)
+5. Generate test traffic: `curl -s https://example.com > /dev/null` and check if raw logs appear
 
-## Python Script Not Producing Output
+**Note:** pmacctd 1.7.6 does not support `print_output_fields`. Use `aggregate` to include `timestamp_start` and `timestamp_end`:
+```
+aggregate: src_host, dst_host, src_port, dst_port, proto, tos, timestamp_start, timestamp_end
+```
 
-**Symptom:** `/var/log/netflow/netflow_wazuh.json` is empty or missing.
+## Normalization Script Processed 0 Records
+
+**Symptom:** Script runs but outputs `[+] Processed 0 new records`
 
 **Checks:**
-1. Run the script manually: `sudo python3 /opt/netflow/normalize_netflow_to_wazuh.py`
-2. Check for Python errors in the output.
-3. Verify the raw input file exists and contains data: `cat /var/log/netflow/netflow_raw.json`
-4. Check the cron job is configured: `sudo crontab -l`
-5. Verify file permissions - the script needs read access to the raw file and write access to the output path.
+1. Check marker vs raw log line count:
+```bash
+cat /var/log/netflow/.last_processed_line
+wc -l /var/log/netflow/netflow_raw.json
+```
+2. If marker equals line count, no new data - wait for pmacctd to flush (60 seconds)
+3. If marker is larger than line count (log was rotated), reset: `sudo rm -f /var/log/netflow/.last_processed_line`
+4. Check raw log has data: `tail -2 /var/log/netflow/netflow_raw.json`
+
+## All Traffic Being Filtered
+
+**Symptom:** Script runs but `skipped` count is very high and `count` is 0 or very low.
+
+**Checks:**
+1. Check your `INTERNAL_PREFIX` in the script matches your subnet
+2. If your lab uses a different subnet (e.g. `192.168.`), update:
+```python
+INTERNAL_PREFIX = "192.168."
+```
+3. Verify what traffic is in the raw log: `tail -10 /var/log/netflow/netflow_raw.json`
 
 ## Wazuh Agent Not Forwarding Logs
 
 **Symptom:** Events do not appear on the Wazuh Manager or Dashboard.
 
 **Checks:**
-1. Verify the agent is connected: check the Wazuh Dashboard under **Agents** or run `sudo /var/ossec/bin/wazuh-control status` on VM 2.
-2. Check the agent log for errors: `sudo tail -50 /var/ossec/logs/ossec.log`
-3. Confirm the `localfile` block is in `/var/ossec/etc/ossec.conf`:
-   ```xml
-   <localfile>
-     <log_format>json</log_format>
-     <location>/var/log/netflow/netflow_wazuh.json</location>
-   </localfile>
-   ```
-4. Restart the agent after any config change: `sudo systemctl restart wazuh-agent`
-5. Check that the Manager IP is correctly set in the agent's `ossec.conf`.
-
-## Decoder Not Matching Events
-
-**Symptom:** Events arrive at the Manager but are not decoded (they show as generic `syslog` or unmatched events in logtest).
-
-**Checks:**
-1. Run `wazuh-logtest` on VM 1: `sudo /var/ossec/bin/wazuh-logtest`
-2. Paste a sample normalized JSON line and check the decoder output.
-3. Verify the decoder file is in the correct path: `/var/ossec/etc/decoders/netflow_decoder.xml`
-4. Check for XML syntax errors: `sudo /var/ossec/bin/wazuh-logtest` will report parsing errors on startup.
-5. Restart the Manager after placing or modifying the decoder: `sudo systemctl restart wazuh-manager`
+1. Verify agent is connected: check Wazuh Dashboard under **Agents**
+2. Check agent log: `sudo tail -50 /var/ossec/logs/ossec.log`
+3. Confirm localfile block in `/var/ossec/etc/ossec.conf`:
+```xml
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/netflow/netflow_wazuh.json</location>
+</localfile>
+```
+4. Restart agent after config change: `sudo systemctl restart wazuh-agent`
 
 ## Rules Not Triggering Alerts
 
-**Symptom:** The decoder matches, but no alert appears in the Dashboard.
+**Symptom:** Events arrive at Manager but no alerts generated.
 
 **Checks:**
-1. In `wazuh-logtest`, confirm the rule ID fires after decoding.
-2. Verify the rules file is in `/var/ossec/etc/rules/netflow_rules.xml`.
-3. Check for XML errors in the rules file.
-4. For frequency-based rules (117002, 117003, 117004), remember they require multiple events within the configured timeframe. A single test event will only trigger the base rule (117001).
-5. Restart the Manager after any rule change.
+1. Test with wazuh-logtest: `sudo /var/ossec/bin/wazuh-logtest`
+2. Paste a sample normalized log line
+3. Verify rules file is valid: `sudo /var/ossec/bin/wazuh-analysisd -t 2>&1 | tail -5`
+4. For frequency-based rules (117002, 117004, etc.), a single test event only triggers the base rule (117001)
 
-## Alerts Not Appearing in the Dashboard
+## OpenSearch Scripted Fields
 
-**Symptom:** `wazuh-logtest` shows alerts, but the Dashboard does not display them.
+**Symptom:** Cannot use Sum aggregation on `data.nf_bytes` or `data.nf_packets` in visualizations.
 
-**Checks:**
-1. Verify the Indexer is running: `sudo systemctl status wazuh-indexer`
-2. Check if alerts are being written: `sudo tail -20 /var/ossec/logs/alerts/alerts.json`
-3. Confirm the Dashboard can connect to the Indexer.
-4. Check the Indexer disk space - if the disk is full, new alerts will not be indexed.
-5. Wait a few minutes - there can be a short delay between alert generation and Dashboard visibility.
+**Cause:** Field type was locked as `string` from initial data ingestion.
 
-## General Tips
+**Fix:** Create scripted fields in Stack Management → Index Patterns → wazuh-alerts-* → Scripted fields:
 
-- Always restart services after configuration changes.
-- Use `wazuh-logtest` as the primary debugging tool for decoder and rule issues.
-- Check log files on both VMs (`/var/ossec/logs/ossec.log`) for error messages.
-- If pmacctd raw logs look correct but normalized logs are wrong, check the Python script's field mapping logic.
-- For network connectivity issues between VMs, verify firewall rules allow port 1514/TCP and 1515/TCP.
+`nf_bytes_num` (number, painless):
+```
+if (doc['data.nf_bytes'].size() > 0) { return Integer.parseInt(doc['data.nf_bytes'].value) } return 0
+```
+
+`nf_packets_num` (number, painless):
+```
+if (doc['data.nf_packets'].size() > 0) { return Integer.parseInt(doc['data.nf_packets'].value) } return 0
+```
+
+Use `nf_bytes_num` and `nf_packets_num` in visualizations instead of the original string fields.
+
+## False Positives
+
+**Common false positive sources:**
+
+| Source                            | Fix                                 |
+|-----------------------------------|-------------------------------------|
+| Multicast traffic (224.x.x.x)     | Already filtered in script          |
+| Broadcast (255.255.255.255)       | Already filtered in script          |
+| Internal VM traffic (same subnet) | Set `INTERNAL_PREFIX` correctly     |
+| Wazuh agent traffic (port 1514)   | Filtered via internal subnet prefix |
+| IPv6 link-local (fe80::)          | Already filtered in script          |
+
+**Rule 117021 (C2 Beaconing) false positives:**
+This rule fires on any repeated connections to the same destination. Internal service traffic (monitoring, backups) can trigger it. Add specific IPs to `EXCLUDED_IPS` in the normalization script if needed.

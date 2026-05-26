@@ -4,103 +4,66 @@ This document explains the custom Wazuh decoder and rules used to detect network
 
 ## Important: Wazuh 4.x JSON Field Handling
 
-Wazuh 4.x does not support dot notation (e.g. `netflow.dst_port`) in rule `<field>` tags for nested JSON. All fields in the normalized log are therefore **flat** (e.g. `nf_src_ip`, `nf_dst_port`). The Python normalization script outputs flat JSON directly.
-
-## Decoder
-
-File: `rules/decoders/netflow_decoder.xml`
-
-The built-in Wazuh `json` decoder handles field extraction automatically. The custom decoder registers the `netflow_json` name for documentation purposes. Rules match events using `<decoded_as>json</decoded_as>` combined with `<field name="nf_src_ip">` to identify NetFlow events specifically.
+Wazuh 4.x does not support dot notation (e.g. `netflow.dst_port`) in rule `<field>` tags for nested JSON. All fields in the normalized log are **flat** with `nf_` prefix (e.g. `nf_src_ip`, `nf_dst_port`). The Python normalization script outputs flat JSON with **integer** values for numeric fields.
 
 ## Normalized Log Field Reference
 
-| Field       | Type   | Description                     |
-|-------------|--------|---------------------------------|
-| timestamp   | string | ISO 8601 timestamp              |
-| nf_src_ip   | string | Source IP address               |
-| nf_dst_ip   | string | Destination IP address          |
-| nf_src_port | string | Source port                     |
-| nf_dst_port | string | Destination port                |
-| nf_protocol | string | Protocol (tcp, udp, icmp, etc.) |
-| nf_packets  | string | Packet count                    |
-| nf_bytes    | string | Byte count                      |
-| nf_duration | string | Flow duration in seconds        |
+| Field       | Type    | Description                                     |
+|-------------|---------|-------------------------------------------------|
+| timestamp   | string  | ISO 8601 timestamp from pmacctd timestamp_start |
+| nf_src_ip   | string  | Source IP address                               |
+| nf_dst_ip   | string  | Destination IP address                          |
+| nf_src_port | integer | Source port                                     |
+| nf_dst_port | integer | Destination port                                |
+| nf_protocol | string  | Protocol (tcp, udp, icmp, etc.)                 |
+| nf_packets  | integer | Packet count                                    |
+| nf_bytes    | integer | Byte count                                      |
+| nf_duration | integer | Flow duration in seconds                        |
 
-## Detection Rules
+## OpenSearch Scripted Fields
 
-### Rule 117001 - Base Rule (Level 3)
-Matches any event containing `nf_src_ip`. All other rules depend on this.
+Because index mapping locks field types on first ingestion, if `nf_bytes` and `nf_packets` were indexed as strings before the integer fix, create scripted fields in OpenSearch Dashboard:
 
-### Rule 117002 - High Connection Volume (Level 8)
-20+ events from the same source IP within 60 seconds. Indicates scanning or aggressive outbound activity.
+**nf_bytes_num:**
+```
+if (doc['data.nf_bytes'].size() > 0) { return Integer.parseInt(doc['data.nf_bytes'].value) } return 0
+```
 
-### Rule 117003 - Suspicious Destination Port (Level 7)
-Ports: 4444, 5555, 6666, 7777, 8888, 9999, 1337, 31337, 8443, 9090, 2222, 3333. Associated with reverse shells, backdoors, and offensive tooling.
+**nf_packets_num:**
+```
+if (doc['data.nf_packets'].size() > 0) { return Integer.parseInt(doc['data.nf_packets'].value) } return 0
+```
 
-### Rule 117004 - Repeated Connection to Same Destination (Level 6)
-10+ connections to the same destination IP within 120 seconds. Indicates beaconing or persistent connection attempts.
+These scripted fields enable Sum aggregation for traffic volume visualizations.
 
-### Rule 117005 - Large Data Transfer (Level 10)
-Flow with bytes > 500,000. Potential data exfiltration or large unauthorized transfer.
+## Detection Rules Summary
 
-### Rule 117006 - ICMP Flood (Level 8)
-15+ ICMP events from the same source within 30 seconds. Indicates DoS or network sweep.
-
-### Rule 117007 - UDP Flood (Level 8)
-25+ UDP events from the same source within 30 seconds. Indicates UDP-based DoS activity.
-
-### Rule 117008 - SSH Brute Force via NetFlow (Level 10)
-15+ connections to port 22 from the same source within 60 seconds.
-
-### Rule 117009 - Port Scan (Level 9)
-15+ connections from the same source within 30 seconds - broad connection pattern consistent with scanning.
-
-### Rule 117010 - RDP Exposure (Level 12)
-5+ connections to port 3389 from the same external host within 60 seconds. High severity - RDP exposed to internet is a critical risk.
-
-### Rule 117011 - DNS Tunneling (Level 10)
-30+ DNS (port 53) connections from the same source within 60 seconds. High frequency DNS is a strong indicator of tunneling.
-
-### Rule 117012 - SMB Lateral Movement (Level 9)
-Any traffic on port 445. SMB should not be visible externally and is a common lateral movement vector.
-
-### Rule 117013 - Telnet Detected (Level 10)
-Any connection on port 23. Telnet transmits credentials in cleartext and should not be in use in any enterprise environment.
-
-### Rule 117014 - FTP Detected (Level 8)
-Any connection on port 21. FTP transmits credentials in cleartext and is a common exfiltration vector.
-
-### Rule 117015 - Database Port Access (Level 10)
-Ports: 3306 (MySQL), 5432 (PostgreSQL), 1433 (MSSQL), 1521 (Oracle), 27017 (MongoDB). Database ports should never be directly reachable from external hosts.
-
-### Rule 117016 - Tor Network Activity (Level 11)
-Ports: 9001, 9050, 9150, 9051. Tor usage in an enterprise environment is high-risk and often policy-violating.
-
-### Rule 117017 - Cryptocurrency Mining (Level 9)
-Ports: 3333, 8333, 45700, 14444. Associated with common mining pool connections.
-
-### Rule 117018 - High Outbound Volume (Level 10)
-30+ outbound flow events from one host within 60 seconds. Possible data staging or exfiltration behavior.
-
-### Rule 117019 - SNMP Reconnaissance (Level 8)
-Any traffic on ports 161/162. SNMP queries to external IPs indicate reconnaissance or misconfiguration.
-
-### Rule 117020 - NetBIOS Traffic (Level 9)
-Ports 137, 138, 139. NetBIOS traffic to external IPs indicates misconfiguration or lateral movement attempt.
-**Confirmed firing in lab** against real traffic from `103.153.61.85`.
-
-### Rule 117021 - C2 Beaconing (Level 11)
-10+ connections to the same destination IP within 300 seconds. Periodic, low-volume connections to the same host are a strong beaconing indicator.
-**Confirmed firing in lab** against real traffic from `176.65.149.230`.
-
-### Rule 117022 - VNC Remote Access (Level 8)
-Ports 5900, 5901, 5902. VNC traffic should be controlled and not exposed externally.
-
-### Rule 117023 - LDAP Reconnaissance (Level 10)
-Ports 389, 636, 3268, 3269. LDAP/LDAPS queries to external hosts indicate directory service enumeration.
-
-### Rule 117024 - DNS Exfiltration (Level 12)
-Port 53 with bytes > 10,000. Large DNS payloads are the primary indicator of DNS-based data exfiltration.
+| Rule ID | Level | Category         | Description                               | Lab Confirmed |
+|---------|-------|------------------|-------------------------------------------|---------------|
+| 117001  | 3     | Base             | NetFlow event received                    | Confirmed     |
+| 117002  | 8     | Anomaly          | High connection volume from single source | -             |
+| 117003  | 7     | Anomaly          | Suspicious destination port               | Confirmed     |
+| 117004  | 6     | Anomaly          | Repeated connection to same destination   | -             |
+| 117005  | 10    | Exfiltration     | Large data transfer (>500KB)              | -             |
+| 117006  | 8     | DoS              | ICMP flood                                | -             |
+| 117007  | 8     | DoS              | UDP flood                                 | -             |
+| 117008  | 10    | Brute Force      | SSH brute force                           | Confirmed     |
+| 117009  | 9     | Recon            | Port scan                                 | -             |
+| 117010  | 12    | Remote Access    | RDP access attempt                        | Confirmed     |
+| 117011  | 10    | Tunneling        | High volume DNS - possible tunneling      | -             |
+| 117012  | 9     | Lateral Movement | SMB traffic                               | Confirmed     |
+| 117013  | 10    | Cleartext        | Telnet connection                         | Confirmed     |
+| 117014  | 8     | Cleartext        | FTP connection                            | Confirmed     |
+| 117015  | 10    | Database         | Database port access from external        | Confirmed     |
+| 117016  | 11    | Evasion          | Tor-related port                          | -             |
+| 117017  | 9     | Policy           | Cryptocurrency mining port                | -             |
+| 117018  | 10    | Exfiltration     | High outbound traffic volume              | -             |
+| 117019  | 8     | Recon            | SNMP reconnaissance                       | -             |
+| 117020  | 9     | Lateral Movement | NetBIOS traffic                           | Confirmed     |
+| 117021  | 11    | C2               | Possible C2 beaconing                     | Confirmed     |
+| 117022  | 8     | Remote Access    | VNC remote access                         | Confirmed     |
+| 117023  | 10    | Recon            | LDAP reconnaissance                       | -             |
+| 117024  | 12    | Exfiltration     | High bytes over DNS                       | -             |
 
 ## Rule Dependency Chain
 
@@ -109,46 +72,68 @@ flowchart TD
     A["117001 - Base Rule\nNetFlow event received\nLevel 3"]
 
     A --> B["117002 - High Volume\nLevel 8 · Frequency"]
-    A --> C["117003 - Suspicious Port\nLevel 7 · Field Match"]
+    A --> C["117003 - Suspicious Port Real Data\nLevel 7 · Field Match"]
     A --> D["117004 - Repeated Dst\nLevel 6 · Frequency"]
     A --> E["117005 - Large Transfer\nLevel 10 · Field Match"]
     A --> F["117006 - ICMP Flood\nLevel 8 · Frequency"]
     A --> G["117007 - UDP Flood\nLevel 8 · Frequency"]
-    A --> H["117008 - SSH BruteForce\nLevel 10 · Frequency"]
+    A --> H["117008 - SSH BruteForce Real Data\nLevel 10 · Frequency"]
     A --> I["117009 - Port Scan\nLevel 9 · Frequency"]
-    A --> J["117010 - RDP Exposure\nLevel 12 · Frequency"]
+    A --> J["117010 - RDP Exposure Real Data\nLevel 12 · Frequency"]
     A --> K["117011 - DNS Tunneling\nLevel 10 · Frequency"]
-    A --> L["117012 - SMB Lateral\nLevel 9 · Field Match"]
-    A --> M["117013 - Telnet\nLevel 10 · Field Match"]
-    A --> N["117014 - FTP\nLevel 8 · Field Match"]
-    A --> O["117015 - DB Port\nLevel 10 · Field Match"]
+    A --> L["117012 - SMB Lateral Real Data\nLevel 9 · Field Match"]
+    A --> M["117013 - Telnet Real Data\nLevel 10 · Field Match"]
+    A --> N["117014 - FTP Real Data\nLevel 8 · Field Match"]
+    A --> O["117015 - DB Port Real Data\nLevel 10 · Field Match"]
     A --> P["117016 - Tor\nLevel 11 · Field Match"]
     A --> Q["117017 - CryptoMining\nLevel 9 · Field Match"]
     A --> R["117018 - High Outbound\nLevel 10 · Frequency"]
     A --> S["117019 - SNMP Recon\nLevel 8 · Field Match"]
-    A --> T["117020 - **NetBIOS** \nLevel 9 · Field Match"]
-    A --> U["117021 - **C2 Beacon** \nLevel 11 · Frequency"]
-    A --> V["117022 - VNC\nLevel 8 · Field Match"]
+    A --> T["117020 - NetBIOS Real Data\nLevel 9 · Field Match"]
+    A --> U["117021 - C2 Beacon Real Data\nLevel 11 · Frequency"]
+    A --> V["117022 - VNC Real Data\nLevel 8 · Field Match"]
     A --> W["117023 - LDAP Recon\nLevel 10 · Field Match"]
     A --> X["117024 - DNS Exfil\nLevel 12 · Field Match"]
 ```
 
-**Bold Text** = Confirmed firing against real lab traffic.
+Real Data = Confirmed firing against real internet traffic in lab.
+
+## Real Traffic Detection Results
+
+VM exposed to internet on Eranya Cloud. Within hours, automated scanners detected:
+
+| Timestamp | Rule       | Attacker IP    | Finding                           |
+|-----------|------------|----------------|-----------------------------------|
+| 16:50:34  | 117010 L12 | 87.251.64.25   | RDP scanner - 4 hits in <1 second |
+| 16:52:02  | 117013 L10 | 43.241.37.250  | Telnet scan port 23               |
+| 16:53:02  | 117013 L10 | 198.46.134.48  | Telnet scan port 23               |
+| 16:52:02  | 117015 L10 | 45.156.87.127  | MySQL port 3306 scan              |
+| 16:50:35  | 117015 L10 | 64.89.163.133  | PostgreSQL port 5432 scan         |
+| 17:08:14  | 117020 L9  | 103.153.61.85  | NetBIOS broadcast - 2,425 hits    |
+| 16:50:36  | 117021 L11 | 185.224.128.16 | C2 beaconing pattern              |
+| 16:50:34  | 117022 L8  | 45.227.10.15   | VNC port 5900 scan                |
+
+**Total alerts in ~5 hours: 2,490 - with 982 at level 9 or above.**
 
 ## Testing Rules
 
-Use `wazuh-logtest` on VM 1:
+Use wazuh-logtest on VM 1:
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
 ```
 
-Test C2 beaconing (rule 117021):
+Test RDP scanner (rule 117010):
 ```
-{"timestamp":"2026-05-26T09:43:02Z","nf_src_ip":"176.65.149.230","nf_dst_ip":"160.22.251.9","nf_src_port":"48640","nf_dst_port":"59983","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"40","nf_duration":"0"}
+{"timestamp":"2026-05-26T09:50:32Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"160.22.251.9","nf_src_port":15844,"nf_dst_port":3389,"nf_protocol":"tcp","nf_packets":5,"nf_bytes":240,"nf_duration":0}
 ```
 
-Test suspicious port (rule 117003):
+Test Telnet (rule 117013):
 ```
-{"timestamp":"2026-05-26T09:33:14Z","nf_src_ip":"43.228.157.8","nf_dst_ip":"160.22.251.9","nf_src_port":"25866","nf_dst_port":"4444","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"52","nf_duration":"0"}
+{"timestamp":"2026-05-26T09:52:01Z","nf_src_ip":"43.241.37.250","nf_dst_ip":"160.22.251.9","nf_src_port":57618,"nf_dst_port":23,"nf_protocol":"tcp","nf_packets":1,"nf_bytes":40,"nf_duration":0}
+```
+
+Test NetBIOS (rule 117020):
+```
+{"timestamp":"2026-05-26T09:43:02Z","nf_src_ip":"103.153.61.85","nf_dst_ip":"103.153.61.255","nf_src_port":138,"nf_dst_port":138,"nf_protocol":"udp","nf_packets":1,"nf_bytes":229,"nf_duration":0}
 ```

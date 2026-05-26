@@ -1,8 +1,35 @@
-# NetFlow Network Traffic Monitoring
+# Wazuh NetFlow Monitoring PoC
 
 Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules - built on a simple two-VM architecture and validated against real internet traffic.
 
----
+## Screenshots
+
+### Dashboard Overview
+![Dashboard Overview](screenshots/Dashboard%20Overview.png)
+
+### High Severity Alerts (Level 9+)
+![High Severity](screenshots/High%20Severity%20Level%209+.png)
+
+### External Threats Only
+![External Threats](screenshots/Eksternal%20Threat%20Only.png)
+
+### Top Attacker IPs
+![Top Attacker IPs](screenshots/Top%20Attacker%20IPs.png)
+
+### Logtest - RDP Rule 117010 (Level 12)
+![Logtest RDP](screenshots/Wazuh%20Logtest%20RDP%20Alerts.png)
+
+### Logtest - Telnet Rule 117013 (Level 10)
+![Logtest Telnet](screenshots/Wazuh%20Logtest%20Telnet%20Alerts.png)
+
+### Logtest - Database Rule 117015 (Level 10)
+![Logtest Database](screenshots/Wazuh%20Logtest%20Database%20Alerts.png)
+
+### Logtest - Suspicious Port Rule 117003 (Level 7)
+![Logtest Suspicious Port](screenshots/Wazuh%20Logtest%20Suspicious%20Alerts.png)
+
+### Logtest - NetBIOS Rule 117020 (Level 9)
+![Logtest NetBIOS](screenshots/Wazuh%20Logtest%20NetBios%20Alerts.png)
 
 ## Project Description
 
@@ -12,7 +39,7 @@ The setup runs on two virtual machines. One VM hosts the Wazuh All-in-One stack 
 
 All detection rules were validated against real internet traffic. The VM was exposed to the internet and within hours was being scanned by automated tools targeting RDP, Telnet, MySQL, PostgreSQL, NetBIOS, and other services.
 
-## Objective
+## Proof of Concept Objective
 
 Show that Wazuh can be extended to monitor network flow metadata using open-source tools and lightweight custom integrations. This PoC is designed to be:
 
@@ -236,7 +263,7 @@ INTERNAL_PREFIX = "160.22."  # adjust to your cloud/lab subnet
 | 117011  | 10    | Tunneling        | High volume DNS - possible tunneling        |
 | 117012  | 9     | Lateral Movement | SMB traffic detected                        |
 | 117013  | 10    | Cleartext        | **Telnet connection detected**              |
-| 117014  | 8     | Cleartext        | FTP connection detected                     |
+| 117014  | 8     | Cleartext        | **FTP connection detected**                 |
 | 117015  | 10    | Database         | **Database port access from external**      |
 | 117016  | 11    | Evasion          | Tor-related port detected                   |
 | 117017  | 9     | Policy           | Cryptocurrency mining port                  |
@@ -248,7 +275,7 @@ INTERNAL_PREFIX = "160.22."  # adjust to your cloud/lab subnet
 | 117023  | 10    | Recon            | LDAP reconnaissance detected                |
 | 117024  | 12    | Exfiltration     | High bytes over DNS - possible exfiltration |
 
-**Bold Text** = Confirmed firing against real internet traffic in lab.
+**Bold** = Confirmed firing against real internet traffic in lab.
 
 ## Real Traffic Detection Results
 
@@ -297,8 +324,7 @@ Refer to [docs/troubleshooting.md](docs/troubleshooting.md) for common issues in
 
 ## Author
 
-**Dimasqi Ramadhani**
-Security Engineer - Detection Engineering & SIEM
+Dimasqi Ramadhani, Security Engineer
 
 - [Portfolio](https://dimasqiramadhani.com)
 - [GitHub](https://github.com/dimasqiramadhani)
