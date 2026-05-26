@@ -2,14 +2,14 @@
 
 ## GitHub Repository Description (under 160 characters)
 
-Wazuh NetFlow Monitoring PoC — network flow visibility with pmacctd, Python normalization, custom decoders, and detection rules on a two-VM architecture.
+Wazuh NetFlow Monitoring PoC - network flow visibility with pmacctd, Python normalization, custom decoders, and detection rules on a two-VM architecture.
 
 
 ## Short Portfolio Description
 
 **Wazuh NetFlow Monitoring PoC**
 
-Built a working detection pipeline that integrates network flow metadata into Wazuh SIEM. The project uses pmacctd to capture traffic metadata on a Linux endpoint, a Python script to normalize raw flow data into structured JSON, and custom Wazuh decoders and rules to generate alerts for suspicious network activity — including high connection volume, unusual ports, and external destination detection.
+Built a working detection pipeline that integrates network flow metadata into Wazuh SIEM. The project uses pmacctd to capture traffic metadata on a Linux endpoint, a Python script to normalize raw flow data into structured JSON, and custom Wazuh decoders and rules to generate alerts for suspicious network activity - including high connection volume, unusual ports, and external destination detection.
 
 The entire setup runs on two VMs: a Wazuh All-in-One server and a Linux agent that doubles as the NetFlow collector. Five custom detection rules (ID 117001–117005) demonstrate practical detection engineering with Wazuh's rule framework.
 
@@ -30,7 +30,7 @@ The pipeline:
 
 Detection use cases include high connection volume, unusual destination ports, repeated external connections, and suspicious destination IPs.
 
-Everything runs on two VMs — no complex infrastructure needed.
+Everything runs on two VMs - no complex infrastructure needed.
 
 The repo includes the full configuration, detection rules, sample logs, and documentation.
 

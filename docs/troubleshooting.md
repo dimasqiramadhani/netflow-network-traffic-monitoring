@@ -20,7 +20,7 @@
 2. Check for Python errors in the output.
 3. Verify the raw input file exists and contains data: `cat /var/log/netflow/netflow_raw.json`
 4. Check the cron job is configured: `sudo crontab -l`
-5. Verify file permissions — the script needs read access to the raw file and write access to the output path.
+5. Verify file permissions - the script needs read access to the raw file and write access to the output path.
 
 ## Wazuh Agent Not Forwarding Logs
 
@@ -69,8 +69,8 @@
 1. Verify the Indexer is running: `sudo systemctl status wazuh-indexer`
 2. Check if alerts are being written: `sudo tail -20 /var/ossec/logs/alerts/alerts.json`
 3. Confirm the Dashboard can connect to the Indexer.
-4. Check the Indexer disk space — if the disk is full, new alerts will not be indexed.
-5. Wait a few minutes — there can be a short delay between alert generation and Dashboard visibility.
+4. Check the Indexer disk space - if the disk is full, new alerts will not be indexed.
+5. Wait a few minutes - there can be a short delay between alert generation and Dashboard visibility.
 
 ## General Tips
 

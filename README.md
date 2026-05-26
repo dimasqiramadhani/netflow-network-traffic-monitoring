@@ -1,6 +1,6 @@
-# Wazuh NetFlow Monitoring PoC
+# NetFlow Network Traffic Monitoring
 
-Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules — built on a simple two-VM architecture and validated against real internet traffic.
+Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules - built on a simple two-VM architecture and validated against real internet traffic.
 
 ---
 
@@ -12,7 +12,7 @@ The setup runs on two virtual machines. One VM hosts the Wazuh All-in-One stack 
 
 All detection rules were validated against real internet traffic. The VM was exposed to the internet and within hours was being scanned by automated tools targeting RDP, Telnet, MySQL, PostgreSQL, NetBIOS, and other services.
 
-## Proof of Concept Objective
+## Objective
 
 Show that Wazuh can be extended to monitor network flow metadata using open-source tools and lightweight custom integrations. This PoC is designed to be:
 
@@ -25,15 +25,15 @@ Show that Wazuh can be extended to monitor network flow metadata using open-sour
 
 ```mermaid
 flowchart TD
-    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
-        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+    subgraph VM2["VM 2 - Linux Agent + NetFlow Collector"]
+        A["Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
         B -->|"Raw JSON + timestamps"| C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
         C --> D["Python Normalization Script\n(filter + flatten + normalize)"]
         D -->|"Flat normalized JSON"| E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
         E --> F["Wazuh Agent\n(localfile monitor + forward)"]
     end
 
-    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
+    subgraph VM1["VM 1 - Wazuh All-in-One Server"]
         G["Wazuh Manager\n(Log Ingestion)"]
         G --> H["Built-in JSON Decoder\n(flat field extraction)"]
         H --> I["Custom Rules\n(117001 – 117024)"]
@@ -59,16 +59,16 @@ flowchart TD
 
 ## Technology Stack
 
-| Component | Role |
-|---|---|
-| Wazuh Manager 4.14 | Log ingestion, decoding, rule evaluation |
-| Wazuh Indexer | Alert storage and indexing |
-| Wazuh Dashboard | Alert visualization and investigation |
-| Wazuh Agent 4.14 | Log forwarding from the collector VM |
-| pmacctd 1.7.6 | Network traffic metadata capture |
-| Python 3 | Raw flow log normalization and filtering |
-| JSON | Log format for both raw and normalized data |
-| Custom Rules (24) | Generates alerts based on flow activity |
+| Component          | Role                                        |
+|--------------------|---------------------------------------------|
+| Wazuh Manager 4.14 | Log ingestion, decoding, rule evaluation    |
+| Wazuh Indexer      | Alert storage and indexing                  |
+| Wazuh Dashboard    | Alert visualization and investigation       |
+| Wazuh Agent 4.14   | Log forwarding from the collector VM        |
+| pmacctd 1.7.6      | Network traffic metadata capture            |
+| Python 3           | Raw flow log normalization and filtering    |
+| JSON               | Log format for both raw and normalized data |
+| Custom Rules (24)  | Generates alerts based on flow activity     |
 
 ## Features
 
@@ -77,7 +77,7 @@ flowchart TD
 - Automatic filtering of multicast, broadcast, loopback, and internal traffic
 - 24 custom Wazuh detection rules (ID 117001–117024)
 - Full data pipeline from capture to dashboard alert
-- Two-VM architecture — simple to deploy and reproduce
+- Two-VM architecture - simple to deploy and reproduce
 - Validated against real internet traffic with confirmed detections
 
 ## Directory Structure
@@ -143,10 +143,10 @@ Refer to [docs/installation.md](docs/installation.md) for detailed setup instruc
 
 Key files:
 
-- **pmacctd**: `/etc/pmacct/pmacctd.conf` — captures traffic with timestamps, writes raw JSON.
-- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` — filters and normalizes raw data.
-- **Wazuh Agent**: `ossec.conf` localfile block — monitors `/var/log/netflow/netflow_wazuh.json`.
-- **Wazuh Rules**: `/var/ossec/etc/rules/netflow_rules.xml` — 24 detection rules.
+- **pmacctd**: `/etc/pmacct/pmacctd.conf` - captures traffic with timestamps, writes raw JSON.
+- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` - filters and normalizes raw data.
+- **Wazuh Agent**: `ossec.conf` localfile block - monitors `/var/log/netflow/netflow_wazuh.json`.
+- **Wazuh Rules**: `/var/ossec/etc/rules/netflow_rules.xml` - 24 detection rules.
 
 ### Important: Flat JSON Format
 
@@ -221,50 +221,50 @@ INTERNAL_PREFIX = "160.22."  # adjust to your cloud/lab subnet
 
 ## Detection Rules
 
-| Rule ID | Level | Category | Description |
-|---|---|---|---|
-| 117001 | 3 | Base | NetFlow event received |
-| 117002 | 8 | Anomaly | High connection volume from single source |
-| 117003 | 7 | Anomaly | Suspicious destination port detected |
-| 117004 | 6 | Anomaly | Repeated connection to same destination |
-| 117005 | 10 | Exfiltration | Large data transfer detected (>500KB) |
-| 117006 | 8 | DoS | ICMP flood detected |
-| 117007 | 8 | DoS | UDP flood detected |
-| 117008 | 10 | Brute Force | Possible SSH brute force |
-| 117009 | 9 | Recon | Possible port scan |
-| 117010 | 12 | Remote Access | **RDP access attempt** ✅ |
-| 117011 | 10 | Tunneling | High volume DNS — possible tunneling |
-| 117012 | 9 | Lateral Movement | SMB traffic detected |
-| 117013 | 10 | Cleartext | **Telnet connection detected** ✅ |
-| 117014 | 8 | Cleartext | FTP connection detected ✅ |
-| 117015 | 10 | Database | **Database port access from external** ✅ |
-| 117016 | 11 | Evasion | Tor-related port detected |
-| 117017 | 9 | Policy | Cryptocurrency mining port |
-| 117018 | 10 | Exfiltration | High outbound traffic volume |
-| 117019 | 8 | Recon | SNMP traffic detected |
-| 117020 | 9 | Lateral Movement | **NetBIOS traffic detected** ✅ |
-| 117021 | 11 | C2 | Possible C2 beaconing |
-| 117022 | 8 | Remote Access | VNC remote access port detected ✅ |
-| 117023 | 10 | Recon | LDAP reconnaissance detected |
-| 117024 | 12 | Exfiltration | High bytes over DNS — possible exfiltration |
+| Rule ID | Level | Category         | Description                                 |
+|---------|-------|------------------|---------------------------------------------|
+| 117001  | 3     | Base             | NetFlow event received                      |
+| 117002  | 8     | Anomaly          | High connection volume from single source   |
+| 117003  | 7     | Anomaly          | Suspicious destination port detected        |
+| 117004  | 6     | Anomaly          | Repeated connection to same destination     |
+| 117005  | 10    | Exfiltration     | Large data transfer detected (>500KB)       |
+| 117006  | 8     | DoS              | ICMP flood detected                         |
+| 117007  | 8     | DoS              | UDP flood detected                          |
+| 117008  | 10    | Brute Force      | Possible SSH brute force                    |
+| 117009  | 9     | Recon            | Possible port scan                          |
+| 117010  | 12    | Remote Access    | **RDP access attempt**                      |
+| 117011  | 10    | Tunneling        | High volume DNS - possible tunneling        |
+| 117012  | 9     | Lateral Movement | SMB traffic detected                        |
+| 117013  | 10    | Cleartext        | **Telnet connection detected**              |
+| 117014  | 8     | Cleartext        | FTP connection detected                     |
+| 117015  | 10    | Database         | **Database port access from external**      |
+| 117016  | 11    | Evasion          | Tor-related port detected                   |
+| 117017  | 9     | Policy           | Cryptocurrency mining port                  |
+| 117018  | 10    | Exfiltration     | High outbound traffic volume                |
+| 117019  | 8     | Recon            | SNMP traffic detected                       |
+| 117020  | 9     | Lateral Movement | **NetBIOS traffic detected**                |
+| 117021  | 11    | C2               | Possible C2 beaconing                       |
+| 117022  | 8     | Remote Access    | **VNC remote access port detected**         |
+| 117023  | 10    | Recon            | LDAP reconnaissance detected                |
+| 117024  | 12    | Exfiltration     | High bytes over DNS - possible exfiltration |
 
-✅ = Confirmed firing against real internet traffic in lab.
+**Bold Text** = Confirmed firing against real internet traffic in lab.
 
 ## Real Traffic Detection Results
 
 This PoC was validated on a live cloud VM (Ubuntu 22.04, Eranya Cloud). Within hours of deployment, the following real threats were detected:
 
-| Rule | Attacker IP | Finding |
-|---|---|---|
-| 117010 (RDP) | 87.251.64.25 | Automated RDP scanner — 4 hits in <1 second |
-| 117013 (Telnet) | 43.241.37.250, 198.46.134.48 + 6 others | Telnet scanner from 8 different IPs |
-| 117015 (Database) | 45.156.87.127 | MySQL port 3306 scan |
-| 117015 (Database) | 64.89.163.133 | PostgreSQL port 5432 scan |
-| 117020 (NetBIOS) | 103.153.61.85 | NetBIOS broadcast — 29 hits |
-| 117022 (VNC) | 45.227.x.x | VNC port 5900 scan |
-| 117014 (FTP) | 212.73.x.x | FTP port 21 access |
+| Rule              | Attacker IP                             | Finding                                     |
+|-------------------|-----------------------------------------|---------------------------------------------|
+| 117010 (RDP)      | 87.251.64.25                            | Automated RDP scanner - 4 hits in <1 second |
+| 117013 (Telnet)   | 43.241.37.250, 198.46.134.48 + 6 others | Telnet scanner from 8 different IPs         |
+| 117015 (Database) | 45.156.87.127                           | MySQL port 3306 scan                        |
+| 117015 (Database) | 64.89.163.133                           | PostgreSQL port 5432 scan                   |
+| 117020 (NetBIOS)  | 103.153.61.85                           | NetBIOS broadcast - 29 hits                 |
+| 117022 (VNC)      | 45.227.x.x                              | VNC port 5900 scan                          |
+| 117014 (FTP)      | 212.73.x.x                              | FTP port 21 access                          |
 
-Total alerts in 24 hours: **1,916** — with **187** at level 7 or above.
+Total alerts in 24 hours: **1,916** - with **187** at level 7 or above.
 
 ## Troubleshooting
 
@@ -298,11 +298,11 @@ Refer to [docs/troubleshooting.md](docs/troubleshooting.md) for common issues in
 ## Author
 
 **Dimasqi Ramadhani**
-Security Engineer — Detection Engineering & SIEM
+Security Engineer - Detection Engineering & SIEM
 
-- GitHub: [github.com/dimasqiramadhani](https://github.com/dimasqiramadhani)
-- LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)
-- Email: dimasqiramadhani@gmail.com
+- [Portfolio](https://dimasqiramadhani.com)
+- [GitHub](https://github.com/dimasqiramadhani)
+- [Linkedin](https://linkedin.com/in/dimasqiramadhani)
 
 ## License
 

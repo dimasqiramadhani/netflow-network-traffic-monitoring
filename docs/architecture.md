@@ -4,7 +4,7 @@
 
 This PoC uses a two-VM design. No additional servers, appliances, or cloud services are required.
 
-## VM 1 — Wazuh All-in-One Server
+## VM 1 - Wazuh All-in-One Server
 
 This VM runs the complete Wazuh stack as a single-node deployment:
 
@@ -18,17 +18,17 @@ The Manager is configured with a custom decoder (`netflow_decoder.xml`) and cust
 - 4 vCPU, 8 GB RAM, 50 GB disk
 - Ubuntu 22.04 or CentOS 8+
 
-## VM 2 — Linux Agent + NetFlow Collector
+## VM 2 - Linux Agent + NetFlow Collector
 
 This VM serves a dual purpose. It acts as a Wazuh Agent endpoint and also runs the NetFlow collection pipeline.
 
 **Components on this VM:**
 
-1. **pmacctd** — A passive traffic accounting daemon from the pmacct project. It listens on a network interface and writes traffic metadata (source/destination IP, ports, protocol, bytes, packets) to a JSON log file.
+1. **pmacctd** - A passive traffic accounting daemon from the pmacct project. It listens on a network interface and writes traffic metadata (source/destination IP, ports, protocol, bytes, packets) to a JSON log file.
 
-2. **Python normalization script** — Reads the raw pmacctd output and converts it into a structured JSON format that Wazuh can parse with the custom decoder. Fields are renamed, timestamps are standardized, and flow duration is calculated.
+2. **Python normalization script** - Reads the raw pmacctd output and converts it into a structured JSON format that Wazuh can parse with the custom decoder. Fields are renamed, timestamps are standardized, and flow duration is calculated.
 
-3. **Wazuh Agent** — Monitors the normalized JSON log file (`/var/log/netflow/netflow_wazuh.json`) and forwards each log entry to the Wazuh Manager.
+3. **Wazuh Agent** - Monitors the normalized JSON log file (`/var/log/netflow/netflow_wazuh.json`) and forwards each log entry to the Wazuh Manager.
 
 **Recommended specs:**
 - 2 vCPU, 2 GB RAM, 20 GB disk
@@ -38,15 +38,15 @@ This VM serves a dual purpose. It acts as a Wazuh Agent endpoint and also runs t
 
 ```mermaid
 flowchart TD
-    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
-        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+    subgraph VM2["VM 2 - Linux Agent + NetFlow Collector"]
+        A["Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
         B -->|"Raw JSON"| C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
         C --> D["Python Normalization Script"]
         D -->|"Normalized JSON"| E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
         E --> F["Wazuh Agent\n(Log Monitoring & Forwarding)"]
     end
 
-    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
+    subgraph VM1["VM 1 - Wazuh All-in-One Server"]
         G["Wazuh Manager\n(Log Ingestion)"]
         G --> H["Custom Decoder\n(netflow_decoder.xml)"]
         H --> I["Custom Rules\n(117001 – 117005)"]

@@ -1,6 +1,80 @@
-{"event_type": "purge", "ip_src": "87.251.64.25", "ip_dst": "160.22.251.9", "port_src": 15844, "port_dst": 3389, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:50:32.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 5, "bytes": 240}
-{"event_type": "purge", "ip_src": "103.153.61.85", "ip_dst": "103.153.61.255", "port_src": 138, "port_dst": 138, "ip_proto": "udp", "tos": 0, "timestamp_start": "2026-05-26 09:43:02.104000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 1, "bytes": 229}
-{"event_type": "purge", "ip_src": "43.241.37.250", "ip_dst": "160.22.251.9", "port_src": 57618, "port_dst": 23, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:52:01.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 1, "bytes": 40}
-{"event_type": "purge", "ip_src": "45.156.87.127", "ip_dst": "160.22.251.9", "port_src": 53992, "port_dst": 3306, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:52:01.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 1, "bytes": 40}
-{"event_type": "purge", "ip_src": "64.89.163.133", "ip_dst": "160.22.251.9", "port_src": 47761, "port_dst": 5432, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:50:32.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 1, "bytes": 44}
-{"event_type": "purge", "ip_src": "198.46.134.48", "ip_dst": "160.22.251.9", "port_src": 4018, "port_dst": 23, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:53:01.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 1, "bytes": 40}
+[
+  {
+    "event_type": "purge",
+    "ip_src": "87.251.64.25",
+    "ip_dst": "160.22.251.9",
+    "port_src": 15844,
+    "port_dst": 3389,
+    "ip_proto": "tcp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:50:32.000000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 5,
+    "bytes": 240
+  },
+  {
+    "event_type": "purge",
+    "ip_src": "103.153.61.85",
+    "ip_dst": "103.153.61.255",
+    "port_src": 138,
+    "port_dst": 138,
+    "ip_proto": "udp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:43:02.104000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 1,
+    "bytes": 229
+  },
+  {
+    "event_type": "purge",
+    "ip_src": "43.241.37.250",
+    "ip_dst": "160.22.251.9",
+    "port_src": 57618,
+    "port_dst": 23,
+    "ip_proto": "tcp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:52:01.000000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 1,
+    "bytes": 40
+  },
+  {
+    "event_type": "purge",
+    "ip_src": "45.156.87.127",
+    "ip_dst": "160.22.251.9",
+    "port_src": 53992,
+    "port_dst": 3306,
+    "ip_proto": "tcp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:52:01.000000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 1,
+    "bytes": 40
+  },
+  {
+    "event_type": "purge",
+    "ip_src": "64.89.163.133",
+    "ip_dst": "160.22.251.9",
+    "port_src": 47761,
+    "port_dst": 5432,
+    "ip_proto": "tcp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:50:32.000000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 1,
+    "bytes": 44
+  },
+  {
+    "event_type": "purge",
+    "ip_src": "198.46.134.48",
+    "ip_dst": "160.22.251.9",
+    "port_src": 4018,
+    "port_dst": 23,
+    "ip_proto": "tcp",
+    "tos": 0,
+    "timestamp_start": "2026-05-26 09:53:01.000000",
+    "timestamp_end": "0000-00-00 00:00:00.000000",
+    "packets": 1,
+    "bytes": 40
+  }
+]

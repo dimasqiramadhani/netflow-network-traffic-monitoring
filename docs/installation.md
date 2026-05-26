@@ -7,7 +7,7 @@
 - Root or sudo access on both VMs.
 - Internet access for package installation.
 
-## VM 1 — Wazuh All-in-One Server
+## VM 1 - Wazuh All-in-One Server
 
 Install the Wazuh All-in-One deployment using the official quickstart method:
 
@@ -26,7 +26,7 @@ sudo systemctl status wazuh-indexer
 sudo systemctl status wazuh-dashboard
 ```
 
-## VM 2 — Wazuh Agent
+## VM 2 - Wazuh Agent
 
 Install the Wazuh Agent on the second VM. Replace `MANAGER_IP` with the IP address of VM 1:
 
@@ -54,7 +54,7 @@ sudo systemctl start wazuh-agent
 
 Verify the agent appears in the Wazuh Dashboard under **Agents**.
 
-## VM 2 — pmacctd
+## VM 2 - pmacctd
 
 Install pmacctd from the pmacct package:
 
@@ -82,7 +82,7 @@ Start pmacctd:
 sudo pmacctd -f /etc/pmacct/pmacctd.conf -D
 ```
 
-## VM 2 — Python Normalization Script
+## VM 2 - Python Normalization Script
 
 Ensure Python 3 is installed:
 
@@ -112,7 +112,7 @@ sudo crontab -e
 * * * * * /usr/bin/python3 /opt/netflow/normalize_netflow_to_wazuh.py
 ```
 
-## VM 1 — Custom Decoder and Rules
+## VM 1 - Custom Decoder and Rules
 
 Copy the decoder and rules to the Wazuh Manager:
 
