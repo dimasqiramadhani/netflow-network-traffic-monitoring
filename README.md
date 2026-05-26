@@ -1,6 +1,6 @@
 # Wazuh NetFlow Monitoring PoC
 
-Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and custom detection rules — built on a simple two-VM architecture.
+Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and custom detection rules built on a simple two-VM architecture.
 
 ---
 
@@ -10,7 +10,7 @@ This project demonstrates how network traffic metadata (NetFlow) can be collecte
 
 The entire setup runs on two virtual machines. One VM hosts the Wazuh All-in-One stack (Manager, Indexer, Dashboard). The other VM runs a Wazuh Agent alongside pmacctd as the NetFlow collector and a Python script that normalizes raw flow data into a format Wazuh can parse.
 
-The result is a working detection pipeline where network flow events trigger custom Wazuh alerts — giving SOC analysts visibility into traffic patterns, suspicious destinations, and anomalous connection behavior directly from the Wazuh Dashboard.
+The result is a working detection pipeline where network flow events trigger custom Wazuh alerts giving SOC analysts visibility into traffic patterns, suspicious destinations, and anomalous connection behavior directly from the Wazuh Dashboard.
 
 ## Proof of Concept Objective
 
@@ -24,15 +24,15 @@ Show that Wazuh can be extended to monitor network flow metadata using open-sour
 
 ```mermaid
 flowchart TD
-    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
-        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+    subgraph VM2["VM 2 - Linux Agent + NetFlow Collector"]
+        A["Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
         B --> C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
         C --> D["Python Normalization Script"]
         D --> E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
         E --> F["Wazuh Agent\n(Log Monitoring & Forwarding)"]
     end
 
-    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
+    subgraph VM1["VM 1 - Wazuh All-in-One Server"]
         G["Wazuh Manager\n(Log Ingestion)"]
         G --> H["Custom Decoder\n(netflow_decoder.xml)"]
         H --> I["Custom Rules\n(117001 – 117005)"]
@@ -58,17 +58,17 @@ flowchart TD
 
 ## Technology Stack
 
-| Component | Role |
-|---|---|
-| Wazuh Manager | Log ingestion, decoding, rule evaluation |
-| Wazuh Indexer | Alert storage and indexing |
-| Wazuh Dashboard | Alert visualization and investigation |
-| Wazuh Agent | Log forwarding from the collector VM |
-| pmacctd | Network traffic metadata capture |
-| Python 3 | Raw flow log normalization |
-| JSON | Log format for both raw and normalized data |
-| Custom Decoder | Extracts NetFlow fields from normalized logs |
-| Custom Rules | Generates alerts based on flow activity |
+| Component       | Role                                         |
+|-----------------|----------------------------------------------|
+| Wazuh Manager   | Log ingestion, decoding, rule evaluation     |
+| Wazuh Indexer   | Alert storage and indexing                   |
+| Wazuh Dashboard | Alert visualization and investigation        |
+| Wazuh Agent     | Log forwarding from the collector VM         |
+| pmacctd         | Network traffic metadata capture             |
+| Python 3        | Raw flow log normalization                   |
+| JSON            | Log format for both raw and normalized data  |
+| Custom Decoder  | Extracts NetFlow fields from normalized logs |
+| Custom Rules    | Generates alerts based on flow activity      |
 
 ## Features
 
@@ -77,7 +77,7 @@ flowchart TD
 - Custom Wazuh decoder for NetFlow field extraction
 - Six detection use cases with custom Wazuh rules (ID 117001–117005)
 - Full data pipeline from capture to dashboard alert
-- Two-VM architecture — simple to deploy and reproduce
+- Two-VM architecture - simple to deploy and reproduce
 - Sample logs and alerts included for reference
 
 ## Directory Structure
@@ -141,9 +141,9 @@ Refer to [docs/installation.md](docs/installation.md) for detailed setup instruc
 
 Refer to [docs/configuration.md](docs/configuration.md) for detailed configuration. Key files:
 
-- **pmacctd**: `/etc/pmacct/pmacctd.conf` — captures traffic metadata and writes raw JSON.
-- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` — converts raw data to normalized format.
-- **Wazuh Agent**: `ossec.conf` localfile block — monitors `/var/log/netflow/netflow_wazuh.json`.
+- **pmacctd**: `/etc/pmacct/pmacctd.conf` - captures traffic metadata and writes raw JSON.
+- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` - converts raw data to normalized format.
+- **Wazuh Agent**: `ossec.conf` localfile block - monitors `/var/log/netflow/netflow_wazuh.json`.
 - **Wazuh Manager**: Custom decoder and rules loaded from `/var/ossec/etc/decoders/` and `/var/ossec/etc/rules/`.
 
 ## Example: Raw NetFlow Log
@@ -210,13 +210,13 @@ Refer to [docs/configuration.md](docs/configuration.md) for detailed configurati
 
 ## Detection Use Cases
 
-| Rule ID | Level | Description |
-|---|---|---|
-| 117001 | 3 | NetFlow event received (base rule) |
-| 117002 | 8 | High connection volume from a single source |
-| 117003 | 10 | Suspicious external destination detected |
-| 117004 | 6 | Repeated connection activity to the same destination |
-| 117005 | 7 | Unusual destination port detected |
+| Rule ID | Level | Description                                          |
+|---------|-------|------------------------------------------------------|
+| 117001  | 3     | NetFlow event received (base rule)                   |
+| 117002  | 8     | High connection volume from a single source          |
+| 117003  | 10    | Suspicious external destination detected             |
+| 117004  | 6     | Repeated connection activity to the same destination |
+| 117005  | 7     | Unusual destination port detected                    |
 
 Each rule is documented in detail in [docs/detection_logic.md](docs/detection_logic.md).
 
@@ -235,7 +235,7 @@ Common issues and solutions are documented in [docs/troubleshooting.md](docs/tro
 This is a Proof of Concept and has intentional limitations:
 
 - Two-VM architecture is not designed for production scale.
-- pmacctd captures traffic metadata only from the collector VM's interfaces — it does not receive NetFlow exports from network devices.
+- pmacctd captures traffic metadata only from the collector VM's interfaces - it does not receive NetFlow exports from network devices.
 - The Python normalization script runs as a scheduled task, not a real-time stream processor.
 - No CDB list or threat intelligence feed is integrated for IP reputation.
 - Rule thresholds are static and not tuned for production environments.
@@ -254,11 +254,11 @@ This is a Proof of Concept and has intentional limitations:
 ## Author
 
 **Dimasqi Ramadhani**
-Security Engineer — Detection Engineering & SIEM
+Security Engineer - Detection Engineering & SIEM
 
-- GitHub: [github.com/dimasqiramadhani](https://github.com/dimasqiramadhani)
-- LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)
-- Email: dimasqiramadhani@gmail.com
+- [Portfolio](https://dimasqiramadhani.com)
+- [GitHub](https://github.com/dimasqiramadhani)
+- [Linkedin](https://linkedin.com/in/dimasqiramadhani)
 
 ## License
 

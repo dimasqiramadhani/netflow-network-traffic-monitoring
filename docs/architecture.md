@@ -39,7 +39,7 @@ This VM serves a dual purpose. It acts as a Wazuh Agent endpoint and also runs t
 ```mermaid
 flowchart TD
     subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
-        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+        A["Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
         B -->|"Raw JSON"| C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
         C --> D["Python Normalization Script"]
         D -->|"Normalized JSON"| E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]

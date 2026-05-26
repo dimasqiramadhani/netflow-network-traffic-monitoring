@@ -15,15 +15,15 @@ The decoder extracts fields from the normalized JSON log events. Since the Wazuh
 
 **Decoded fields available to rules:**
 
-| Decoded Field | Source JSON Path | Description |
-|---|---|---|
-| netflow.src_ip | netflow.src_ip | Source IP address |
-| netflow.dst_ip | netflow.dst_ip | Destination IP address |
-| netflow.src_port | netflow.src_port | Source port |
-| netflow.dst_port | netflow.dst_port | Destination port |
+| Decoded Field    | Source JSON Path | Description                         |
+|------------------|------------------|-------------------------------------|
+| netflow.src_ip   | netflow.src_ip   | Source IP address                   |
+| netflow.dst_ip   | netflow.dst_ip   | Destination IP address              |
+| netflow.src_port | netflow.src_port | Source port                         |
+| netflow.dst_port | netflow.dst_port | Destination port                    |
 | netflow.protocol | netflow.protocol | Transport protocol (tcp, udp, icmp) |
-| netflow.bytes | netflow.bytes | Total bytes transferred |
-| netflow.packets | netflow.packets | Total packets in flow |
+| netflow.bytes    | netflow.bytes    | Total bytes transferred             |
+| netflow.packets  | netflow.packets  | Total packets in flow               |
 
 ## Custom Rules
 
