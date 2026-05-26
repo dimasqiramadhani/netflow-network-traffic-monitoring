@@ -1,49 +1,201 @@
-<!--
-  netflow_rules.xml
-  Custom Wazuh rules for NetFlow detection.
-  Place this file in: /var/ossec/etc/rules/netflow_rules.xml
-  Rule ID range: 117000 - 117009
--->
-
 <group name="netflow,">
 
-  <!-- Base rule: matches any decoded NetFlow event -->
+  <!-- Base rule: matches any NetFlow JSON event -->
   <rule id="117001" level="3">
-    <decoded_as>netflow_json</decoded_as>
+    <decoded_as>json</decoded_as>
+    <field name="nf_src_ip">\.+</field>
     <description>NetFlow: Network flow event received</description>
     <group>netflow,</group>
   </rule>
 
-  <!-- High connection volume from a single source IP -->
+  <!-- High connection volume from single source -->
   <rule id="117002" level="8" frequency="20" timeframe="60">
     <if_matched_sid>117001</if_matched_sid>
-    <same_field>netflow.src_ip</same_field>
-    <description>NetFlow: High connection volume from $(netflow.src_ip)</description>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: High connection volume from $(nf_src_ip)</description>
     <group>netflow,network_anomaly,</group>
   </rule>
 
-  <!-- Suspicious external destination (non-RFC1918) with repeated activity -->
-  <rule id="117003" level="10" frequency="5" timeframe="120">
+  <!-- Suspicious/offensive destination port -->
+  <rule id="117003" level="7">
     <if_sid>117001</if_sid>
-    <field name="netflow.dst_ip" negate="yes">^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.</field>
-    <description>NetFlow: Suspicious external destination detected - $(netflow.dst_ip)</description>
-    <group>netflow,network_threat,</group>
+    <field name="nf_dst_port" type="pcre2">^(4444|5555|6666|7777|8888|9999|1337|31337|8443|9090|2222|3333)$</field>
+    <description>NetFlow: Suspicious destination port $(nf_dst_port) from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,</group>
   </rule>
 
-  <!-- Repeated connection activity to the same destination -->
+  <!-- Repeated connection to same destination -->
   <rule id="117004" level="6" frequency="10" timeframe="120">
     <if_matched_sid>117001</if_matched_sid>
-    <same_field>netflow.dst_ip</same_field>
-    <description>NetFlow: Repeated connection activity to $(netflow.dst_ip)</description>
+    <same_field>nf_dst_ip</same_field>
+    <description>NetFlow: Repeated connection activity to $(nf_dst_ip)</description>
     <group>netflow,network_anomaly,</group>
   </rule>
 
-  <!-- Unusual destination port associated with backdoors or offensive tools -->
-  <rule id="117005" level="7">
+  <!-- Large data transfer - potential exfiltration (>500KB) -->
+  <rule id="117005" level="10">
     <if_sid>117001</if_sid>
-    <field name="netflow.dst_port">^(4444|5555|6666|7777|8888|9999|1337|31337)$</field>
-    <description>NetFlow: Unusual destination port $(netflow.dst_port) detected</description>
-    <group>netflow,network_anomaly,</group>
+    <field name="nf_bytes" type="pcre2">^[5-9][0-9]{5,}$|^[0-9]{7,}$</field>
+    <description>NetFlow: Large data transfer from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,data_exfiltration,</group>
+  </rule>
+
+  <!-- ICMP flood -->
+  <rule id="117006" level="8" frequency="15" timeframe="30">
+    <if_matched_sid>117001</if_matched_sid>
+    <field name="nf_protocol" type="pcre2">^icmp$</field>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: ICMP flood from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,dos,</group>
+  </rule>
+
+  <!-- UDP flood -->
+  <rule id="117007" level="8" frequency="25" timeframe="30">
+    <if_matched_sid>117001</if_matched_sid>
+    <field name="nf_protocol" type="pcre2">^udp$</field>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: UDP flood from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,dos,</group>
+  </rule>
+
+  <!-- SSH brute force via NetFlow -->
+  <rule id="117008" level="10" frequency="15" timeframe="60">
+    <if_matched_sid>117001</if_matched_sid>
+    <field name="nf_dst_port" type="pcre2">^22$</field>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: Possible SSH brute force from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,brute_force,</group>
+  </rule>
+
+  <!-- Port scanning - high frequency from single source -->
+  <rule id="117009" level="9" frequency="15" timeframe="30">
+    <if_matched_sid>117001</if_matched_sid>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: Possible port scan from $(nf_src_ip)</description>
+    <group>netflow,network_scan,</group>
+  </rule>
+
+  <!-- RDP exposed - repeated access attempts -->
+  <rule id="117010" level="12" frequency="5" timeframe="60">
+    <if_matched_sid>117001</if_matched_sid>
+    <field name="nf_dst_port" type="pcre2">^3389$</field>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: RDP access attempt from external host $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,remote_access,</group>
+  </rule>
+
+  <!-- DNS tunneling - high frequency DNS -->
+  <rule id="117011" level="10" frequency="30" timeframe="60">
+    <if_matched_sid>117001</if_matched_sid>
+    <field name="nf_dst_port" type="pcre2">^53$</field>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: High volume DNS traffic from $(nf_src_ip) - possible DNS tunneling</description>
+    <group>netflow,network_anomaly,dns_tunneling,</group>
+  </rule>
+
+  <!-- SMB lateral movement -->
+  <rule id="117012" level="9">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^445$</field>
+    <description>NetFlow: SMB traffic detected from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,lateral_movement,</group>
+  </rule>
+
+  <!-- Telnet cleartext protocol -->
+  <rule id="117013" level="10">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^23$</field>
+    <description>NetFlow: Telnet connection detected from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,cleartext_protocol,</group>
+  </rule>
+
+  <!-- FTP cleartext protocol -->
+  <rule id="117014" level="8">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^21$</field>
+    <description>NetFlow: FTP connection detected from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,cleartext_protocol,</group>
+  </rule>
+
+  <!-- Database port access -->
+  <rule id="117015" level="10">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(3306|5432|1433|1521|27017)$</field>
+    <description>NetFlow: Database port $(nf_dst_port) access from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,database,</group>
+  </rule>
+
+  <!-- Tor network activity -->
+  <rule id="117016" level="11">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(9001|9050|9150|9051)$</field>
+    <description>NetFlow: Tor-related port $(nf_dst_port) detected from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,tor,</group>
+  </rule>
+
+  <!-- Cryptocurrency mining -->
+  <rule id="117017" level="9">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(3333|8333|45700|14444)$</field>
+    <description>NetFlow: Possible cryptocurrency mining port $(nf_dst_port) from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,cryptomining,</group>
+  </rule>
+
+  <!-- High outbound traffic - possible staging/exfil -->
+  <rule id="117018" level="10" frequency="30" timeframe="60">
+    <if_matched_sid>117001</if_matched_sid>
+    <same_field>nf_src_ip</same_field>
+    <description>NetFlow: High outbound traffic volume from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,data_exfiltration,</group>
+  </rule>
+
+  <!-- SNMP reconnaissance -->
+  <rule id="117019" level="8">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(161|162)$</field>
+    <description>NetFlow: SNMP traffic detected from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,reconnaissance,</group>
+  </rule>
+
+  <!-- NetBIOS lateral movement -->
+  <rule id="117020" level="9">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(137|138|139)$</field>
+    <description>NetFlow: NetBIOS traffic detected from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,lateral_movement,</group>
+  </rule>
+
+  <!-- C2 beaconing - periodic repeated connections to same dst -->
+  <rule id="117021" level="11" frequency="10" timeframe="300">
+    <if_matched_sid>117001</if_matched_sid>
+    <same_field>nf_dst_ip</same_field>
+    <description>NetFlow: Possible C2 beaconing to $(nf_dst_ip) from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,command_and_control,</group>
+  </rule>
+
+  <!-- VNC remote access -->
+  <rule id="117022" level="8">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(5900|5901|5902)$</field>
+    <description>NetFlow: VNC remote access port $(nf_dst_port) detected from $(nf_src_ip)</description>
+    <group>netflow,network_anomaly,remote_access,</group>
+  </rule>
+
+  <!-- LDAP reconnaissance -->
+  <rule id="117023" level="10">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^(389|636|3268|3269)$</field>
+    <description>NetFlow: LDAP traffic on port $(nf_dst_port) from $(nf_src_ip) to $(nf_dst_ip)</description>
+    <group>netflow,network_anomaly,reconnaissance,</group>
+  </rule>
+
+  <!-- DNS exfiltration - high bytes over port 53 -->
+  <rule id="117024" level="12">
+    <if_sid>117001</if_sid>
+    <field name="nf_dst_port" type="pcre2">^53$</field>
+    <field name="nf_bytes" type="pcre2">^[1-9][0-9]{4,}$</field>
+    <description>NetFlow: High bytes over DNS from $(nf_src_ip) - possible DNS exfiltration</description>
+    <group>netflow,network_anomaly,dns_tunneling,data_exfiltration,</group>
   </rule>
 
 </group>

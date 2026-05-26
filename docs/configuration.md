@@ -8,25 +8,44 @@ File: `/etc/pmacct/pmacctd.conf`
 
 ```
 ! pmacctd configuration for NetFlow PoC
+! Tested with pmacctd 1.7.6-git on Ubuntu 22.04
+
 daemonize: true
-pcap_interface: ens33
+pcap_interface: enp1s0
 plugins: print
 print_output: json
 print_output_file: /var/log/netflow/netflow_raw.json
 print_output_file_append: true
 print_refresh_time: 60
-aggregate: src_host, dst_host, src_port, dst_port, proto, tos
+
+! timestamp_start and timestamp_end required for accurate flow timestamps
+aggregate: src_host, dst_host, src_port, dst_port, proto, tos, timestamp_start, timestamp_end
 ```
 
 **Key parameters:**
 
-- `pcap_interface`: Set this to your VM's active network interface (e.g., `ens33`, `eth0`, `ens18`). Check with `ip link show`.
+- `pcap_interface`: Set to your VM's active network interface. Check with `ip link show`.
 - `print_output: json`: Outputs flow records in JSON format.
 - `print_output_file`: Path where raw flow data is written.
 - `print_refresh_time: 60`: Flushes accumulated flow data every 60 seconds.
-- `aggregate`: Defines which fields pmacctd tracks per flow record.
+- `aggregate`: Defines which fields pmacctd tracks. `timestamp_start` and `timestamp_end` are required for accurate timestamps in normalized output.
 
-**Note:** The interface name depends on your VM's network configuration. Adjust `pcap_interface` accordingly.
+**Starting pmacctd:**
+
+```bash
+sudo pmacctd -f /etc/pmacct/pmacctd.conf
+```
+
+**Verifying output:**
+
+```bash
+tail -f /var/log/netflow/netflow_raw.json
+```
+
+Expected output includes `timestamp_start` field:
+```json
+{"event_type": "purge", "ip_src": "87.251.64.25", "ip_dst": "160.22.251.9", "port_src": 15844, "port_dst": 3389, "ip_proto": "tcp", "tos": 0, "timestamp_start": "2026-05-26 09:50:32.000000", "timestamp_end": "0000-00-00 00:00:00.000000", "packets": 5, "bytes": 240}
+```
 
 ## Python Normalization Script
 
@@ -35,39 +54,63 @@ File: `/opt/netflow/normalize_netflow_to_wazuh.py`
 The script performs the following:
 
 1. Reads raw JSON records from `/var/log/netflow/netflow_raw.json`.
-2. Renames fields to a consistent naming convention (`ip_src` → `src_ip`, `ip_dst` → `dst_ip`, etc.).
-3. Converts timestamps to ISO 8601 format.
-4. Calculates flow duration in seconds from `stamp_inserted` and `stamp_updated`.
+2. Filters out noise traffic: multicast (224.0.0.0/4), broadcast (255.255.255.255), loopback (127.x.x.x), IPv6 link-local (fe80::), and internal subnet.
+3. Parses `timestamp_start` from pmacctd output (supports microsecond format).
+4. Renames fields to flat format with `nf_` prefix for Wazuh rule compatibility.
 5. Writes each normalized record as a single JSON line to `/var/log/netflow/netflow_wazuh.json`.
+6. Tracks the last processed line to avoid reprocessing on each run.
+
+**Internal subnet filter:**
+
+Edit `INTERNAL_PREFIX` in the script to match your environment:
+
+```python
+INTERNAL_PREFIX = "160.22."  # adjust to your cloud/lab subnet
+```
+
+**Why flat JSON?**
+
+Wazuh 4.x does not support dot notation (e.g. `netflow.dst_port`) in rule `<field>` tags for nested JSON objects. All fields must be at the top level. The script outputs flat JSON with `nf_` prefixed field names.
 
 **Input format** (raw pmacctd output):
 
 ```json
 {
   "event_type": "purge",
-  "ip_src": "192.168.10.15",
-  "ip_dst": "185.220.101.34",
-  "port_src": 49832,
-  "port_dst": 443,
+  "ip_src": "87.251.64.25",
+  "ip_dst": "160.22.251.9",
+  "port_src": 15844,
+  "port_dst": 3389,
   "ip_proto": "tcp",
-  "packets": 12,
-  "bytes": 3456,
-  "stamp_inserted": "2025-01-15 10:32:01",
-  "stamp_updated": "2025-01-15 10:32:30"
+  "timestamp_start": "2026-05-26 09:50:32.000000",
+  "timestamp_end": "0000-00-00 00:00:00.000000",
+  "packets": 5,
+  "bytes": 240
 }
 ```
 
-**Output format** (normalized for Wazuh):
+**Output format** (normalized flat JSON for Wazuh):
 
 ```json
-{"timestamp":"2025-01-15T10:32:01Z","netflow":{"src_ip":"192.168.10.15","dst_ip":"185.220.101.34","src_port":49832,"dst_port":443,"protocol":"tcp","packets":12,"bytes":3456,"duration_sec":29}}
+{"timestamp":"2026-05-26T09:50:32Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"160.22.251.9","nf_src_port":"15844","nf_dst_port":"3389","nf_protocol":"tcp","nf_packets":"5","nf_bytes":"240","nf_duration":"0"}
 ```
 
-Each output line is a single JSON object. Wazuh reads each line as one event.
+## Cron Job
+
+Run the normalization script every minute:
+
+```bash
+sudo crontab -e
+```
+
+Add:
+```
+* * * * * /usr/bin/python3 /opt/netflow/normalize_netflow_to_wazuh.py
+```
 
 ## Wazuh Agent Configuration
 
-On VM 2, add the following `localfile` block to `/var/ossec/etc/ossec.conf` inside the `<ossec_config>` section:
+On VM 2, add the following `localfile` block to `/var/ossec/etc/ossec.conf`:
 
 ```xml
 <localfile>
@@ -76,27 +119,27 @@ On VM 2, add the following `localfile` block to `/var/ossec/etc/ossec.conf` insi
 </localfile>
 ```
 
-This tells the Wazuh Agent to:
-- Monitor the normalized JSON log file.
-- Parse each line as a JSON event.
-- Forward each event to the Wazuh Manager.
-
-After adding this configuration, restart the agent:
+Restart the agent after any config change:
 
 ```bash
 sudo systemctl restart wazuh-agent
 ```
 
-## Wazuh Manager Configuration
+## Wazuh Rules Configuration
 
-No changes to the Manager's `ossec.conf` are required for this PoC. The custom decoder and rules are placed in:
+Copy the rules file to the Wazuh Manager:
 
-- `/var/ossec/etc/decoders/netflow_decoder.xml`
-- `/var/ossec/etc/rules/netflow_rules.xml`
+```bash
+sudo cp rules/rules/netflow_rules.xml /var/ossec/etc/rules/netflow_rules.xml
+```
 
-The Manager automatically loads decoders and rules from these directories on restart.
+Test configuration before restarting:
 
-Restart the Manager after placing the files:
+```bash
+sudo /var/ossec/bin/wazuh-analysisd -t 2>&1 | tail -5
+```
+
+Restart the Manager:
 
 ```bash
 sudo systemctl restart wazuh-manager
@@ -104,7 +147,7 @@ sudo systemctl restart wazuh-manager
 
 ## Log Rotation
 
-To prevent log files from growing indefinitely, configure logrotate for the NetFlow logs:
+Prevent log files from growing indefinitely:
 
 ```bash
 sudo tee /etc/logrotate.d/netflow << 'EOF'
@@ -116,7 +159,3 @@ sudo tee /etc/logrotate.d/netflow << 'EOF'
     notifempty
     copytruncate
 }
-EOF
-```
-
-This rotates logs daily and keeps seven days of history.

@@ -1,104 +1,15 @@
-{
-  "timestamp": "2025-01-15T10:32:05Z",
-  "rule": {
-    "id": "117001",
-    "level": 3,
-    "description": "NetFlow: Network flow event received",
-    "groups": ["netflow"]
-  },
-  "agent": {
-    "id": "001",
-    "name": "netflow-collector",
-    "ip": "192.168.10.100"
-  },
-  "manager": {
-    "name": "wazuh-server"
-  },
-  "data": {
-    "timestamp": "2025-01-15T10:32:01Z",
-    "netflow": {
-      "src_ip": "192.168.10.15",
-      "dst_ip": "185.220.101.34",
-      "src_port": 49832,
-      "dst_port": 443,
-      "protocol": "tcp",
-      "packets": 12,
-      "bytes": 3456,
-      "duration_sec": 29
-    }
-  },
-  "decoder": {
-    "name": "netflow_json"
-  },
-  "location": "/var/log/netflow/netflow_wazuh.json"
-}
+{"timestamp":"2026-05-26T16:43:02.859+0700","rule":{"level":3,"description":"NetFlow: Network flow event received","id":"117001","firedtimes":96,"mail":false,"groups":["netflow"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:43:02Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"160.22.251.9","nf_src_port":"54821","nf_dst_port":"3389","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"44","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
 
-{
-  "timestamp": "2025-01-15T10:34:02Z",
-  "rule": {
-    "id": "117005",
-    "level": 7,
-    "description": "NetFlow: Unusual destination port 4444 detected",
-    "groups": ["netflow", "network_anomaly"]
-  },
-  "agent": {
-    "id": "001",
-    "name": "netflow-collector",
-    "ip": "192.168.10.100"
-  },
-  "manager": {
-    "name": "wazuh-server"
-  },
-  "data": {
-    "timestamp": "2025-01-15T10:34:00Z",
-    "netflow": {
-      "src_ip": "192.168.10.15",
-      "dst_ip": "45.33.32.156",
-      "src_port": 51200,
-      "dst_port": 4444,
-      "protocol": "tcp",
-      "packets": 25,
-      "bytes": 8192,
-      "duration_sec": 45
-    }
-  },
-  "decoder": {
-    "name": "netflow_json"
-  },
-  "location": "/var/log/netflow/netflow_wazuh.json"
-}
+{"timestamp":"2026-05-26T16:50:34.620+0700","rule":{"level":12,"description":"NetFlow: RDP access attempt from external host 87.251.64.25","id":"117010","frequency":5,"firedtimes":4,"mail":false,"groups":["netflow","network_anomaly","remote_access"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:34Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"160.22.251.9","nf_src_port":"54821","nf_dst_port":"3389","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"44","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
 
-{
-  "timestamp": "2025-01-15T10:35:15Z",
-  "rule": {
-    "id": "117003",
-    "level": 10,
-    "description": "NetFlow: Suspicious external destination detected - 185.220.101.34",
-    "groups": ["netflow", "network_threat"]
-  },
-  "agent": {
-    "id": "001",
-    "name": "netflow-collector",
-    "ip": "192.168.10.100"
-  },
-  "manager": {
-    "name": "wazuh-server"
-  },
-  "data": {
-    "timestamp": "2025-01-15T10:35:12Z",
-    "netflow": {
-      "src_ip": "192.168.10.15",
-      "dst_ip": "185.220.101.34",
-      "src_port": 49900,
-      "dst_port": 443,
-      "protocol": "tcp",
-      "packets": 15,
-      "bytes": 4200,
-      "duration_sec": 28
-    }
-  },
-  "decoder": {
-    "name": "netflow_json"
-  },
-  "location": "/var/log/netflow/netflow_wazuh.json"
-}
+{"timestamp":"2026-05-26T16:50:36.259+0700","rule":{"level":11,"description":"NetFlow: Possible C2 beaconing to 160.22.251.9 from 185.224.128.16","id":"117021","frequency":10,"firedtimes":3,"mail":false,"groups":["netflow","network_anomaly","command_and_control"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:36Z","nf_src_ip":"185.224.128.16","nf_dst_ip":"160.22.251.9","nf_src_port":"48640","nf_dst_port":"59983","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"40","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
+
+{"timestamp":"2026-05-26T16:43:02.859+0700","rule":{"level":9,"description":"NetFlow: NetBIOS traffic detected from 103.153.61.85 to 103.153.61.255","id":"117020","firedtimes":16,"mail":false,"groups":["netflow","network_anomaly","lateral_movement"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:43:02Z","nf_src_ip":"103.153.61.85","nf_dst_ip":"103.153.61.255","nf_src_port":"138","nf_dst_port":"138","nf_protocol":"udp","nf_packets":"1","nf_bytes":"229","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
+
+{"timestamp":"2026-05-26T16:50:34.000+0700","rule":{"level":10,"description":"NetFlow: Telnet connection detected from 43.241.37.250 to 160.22.251.9","id":"117013","firedtimes":3,"mail":false,"groups":["netflow","network_anomaly","cleartext_protocol"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:34Z","nf_src_ip":"43.241.37.250","nf_dst_ip":"160.22.251.9","nf_src_port":"54123","nf_dst_port":"23","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"44","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
+
+{"timestamp":"2026-05-26T16:50:34.000+0700","rule":{"level":10,"description":"NetFlow: Database port 5432 access from 64.89.163.133","id":"117015","firedtimes":1,"mail":false,"groups":["netflow","network_anomaly","database"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:34Z","nf_src_ip":"64.89.163.133","nf_dst_ip":"160.22.251.9","nf_src_port":"41233","nf_dst_port":"5432","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"44","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
+
+{"timestamp":"2026-05-26T16:50:34.000+0700","rule":{"level":7,"description":"NetFlow: Suspicious destination port 8443 from 103.153.61.85","id":"117003","firedtimes":5,"mail":false,"groups":["netflow","network_anomaly"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:34Z","nf_src_ip":"103.153.61.85","nf_dst_ip":"160.22.251.9","nf_src_port":"45123","nf_dst_port":"8443","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"52","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}
+
+{"timestamp":"2026-05-26T16:50:34.000+0700","rule":{"level":8,"description":"NetFlow: VNC remote access port 5900 detected from 45.227.x.x","id":"117022","firedtimes":1,"mail":false,"groups":["netflow","network_anomaly","remote_access"]},"agent":{"id":"001","name":"ubnsrv-netflow","ip":"160.22.251.9"},"manager":{"name":"ubnsrv-aio-wzh"},"decoder":{"name":"json"},"data":{"timestamp":"2026-05-26T09:50:34Z","nf_src_ip":"45.227.10.15","nf_dst_ip":"160.22.251.9","nf_src_port":"43210","nf_dst_port":"5900","nf_protocol":"tcp","nf_packets":"1","nf_bytes":"44","nf_duration":"0"},"location":"/var/log/netflow/netflow_wazuh.json"}

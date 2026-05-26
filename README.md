@@ -1,6 +1,6 @@
-# NetfLow Network Traffic Monitoring
+# Wazuh NetFlow Monitoring PoC
 
-Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and custom detection rules built on a simple two-VM architecture.
+Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules — built on a simple two-VM architecture and validated against real internet traffic.
 
 ---
 
@@ -8,9 +8,9 @@ Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log nor
 
 This project demonstrates how network traffic metadata (NetFlow) can be collected, normalized, forwarded, parsed, and alerted inside Wazuh SIEM without relying on a complex enterprise deployment.
 
-The entire setup runs on two virtual machines. One VM hosts the Wazuh All-in-One stack (Manager, Indexer, Dashboard). The other VM runs a Wazuh Agent alongside pmacctd as the NetFlow collector and a Python script that normalizes raw flow data into a format Wazuh can parse.
+The setup runs on two virtual machines. One VM hosts the Wazuh All-in-One stack (Manager, Indexer, Dashboard). The other VM runs a Wazuh Agent alongside pmacctd as the NetFlow collector and a Python script that normalizes raw flow data into a format Wazuh can parse.
 
-The result is a working detection pipeline where network flow events trigger custom Wazuh alerts giving SOC analysts visibility into traffic patterns, suspicious destinations, and anomalous connection behavior directly from the Wazuh Dashboard.
+All detection rules were validated against real internet traffic. The VM was exposed to the internet and within hours was being scanned by automated tools targeting RDP, Telnet, MySQL, PostgreSQL, NetBIOS, and other services.
 
 ## Proof of Concept Objective
 
@@ -19,23 +19,24 @@ Show that Wazuh can be extended to monitor network flow metadata using open-sour
 - Reproducible in a home lab or cloud environment
 - Simple enough to understand and modify
 - Realistic enough to demonstrate detection engineering skills
+- Validated with real traffic data
 
 ## Architecture Overview
 
 ```mermaid
 flowchart TD
-    subgraph VM2["VM 2 - Linux Agent + NetFlow Collector"]
-        A["Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
-        B --> C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
-        C --> D["Python Normalization Script"]
-        D --> E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
-        E --> F["Wazuh Agent\n(Log Monitoring & Forwarding)"]
+    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
+        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+        B -->|"Raw JSON + timestamps"| C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
+        C --> D["Python Normalization Script\n(filter + flatten + normalize)"]
+        D -->|"Flat normalized JSON"| E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
+        E --> F["Wazuh Agent\n(localfile monitor + forward)"]
     end
 
-    subgraph VM1["VM 1 - Wazuh All-in-One Server"]
+    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
         G["Wazuh Manager\n(Log Ingestion)"]
-        G --> H["Custom Decoder\n(netflow_decoder.xml)"]
-        H --> I["Custom Rules\n(117001 – 117005)"]
+        G --> H["Built-in JSON Decoder\n(flat field extraction)"]
+        H --> I["Custom Rules\n(117001 – 117024)"]
         I --> J["Wazuh Indexer\n(Alert Storage)"]
         J --> K["Wazuh Dashboard\n(Alert Visualization)"]
     end
@@ -45,40 +46,39 @@ flowchart TD
 
 ## Data Flow
 
-1. Network traffic passes through the Linux Agent VM.
-2. `pmacctd` captures traffic metadata (source IP, destination IP, ports, protocol, bytes, packets).
+1. Network traffic passes through the Linux Agent VM interface.
+2. `pmacctd` captures traffic metadata with timestamps (`timestamp_start`, `timestamp_end`).
 3. Raw flow data is written to `/var/log/netflow/netflow_raw.json`.
-4. A Python script reads the raw data and converts it into normalized JSON.
+4. A Python script reads raw data, filters noise (multicast, broadcast, loopback, internal subnet), and outputs flat normalized JSON.
 5. Normalized output is saved to `/var/log/netflow/netflow_wazuh.json`.
 6. Wazuh Agent monitors the normalized log file using `localfile` configuration.
-7. Events are forwarded to the Wazuh Manager over the agent connection.
-8. The Wazuh Manager parses each event using a custom decoder.
-9. Custom Wazuh rules evaluate decoded fields and generate alerts.
+7. Events are forwarded to the Wazuh Manager over the agent connection (port 1514/TCP).
+8. The Wazuh Manager parses each event using the built-in JSON decoder.
+9. Custom rules (117001–117024) evaluate decoded fields and generate alerts.
 10. Alerts are visible in the Wazuh Dashboard for review and investigation.
 
 ## Technology Stack
 
-| Component       | Role                                         |
-|-----------------|----------------------------------------------|
-| Wazuh Manager   | Log ingestion, decoding, rule evaluation     |
-| Wazuh Indexer   | Alert storage and indexing                   |
-| Wazuh Dashboard | Alert visualization and investigation        |
-| Wazuh Agent     | Log forwarding from the collector VM         |
-| pmacctd         | Network traffic metadata capture             |
-| Python 3        | Raw flow log normalization                   |
-| JSON            | Log format for both raw and normalized data  |
-| Custom Decoder  | Extracts NetFlow fields from normalized logs |
-| Custom Rules    | Generates alerts based on flow activity      |
+| Component | Role |
+|---|---|
+| Wazuh Manager 4.14 | Log ingestion, decoding, rule evaluation |
+| Wazuh Indexer | Alert storage and indexing |
+| Wazuh Dashboard | Alert visualization and investigation |
+| Wazuh Agent 4.14 | Log forwarding from the collector VM |
+| pmacctd 1.7.6 | Network traffic metadata capture |
+| Python 3 | Raw flow log normalization and filtering |
+| JSON | Log format for both raw and normalized data |
+| Custom Rules (24) | Generates alerts based on flow activity |
 
 ## Features
 
-- Network flow metadata collection using pmacctd
-- Python-based log normalization to structured JSON
-- Custom Wazuh decoder for NetFlow field extraction
-- Six detection use cases with custom Wazuh rules (ID 117001–117005)
+- Network flow metadata collection using pmacctd with real timestamps
+- Python-based log normalization to flat structured JSON
+- Automatic filtering of multicast, broadcast, loopback, and internal traffic
+- 24 custom Wazuh detection rules (ID 117001–117024)
 - Full data pipeline from capture to dashboard alert
-- Two-VM architecture - simple to deploy and reproduce
-- Sample logs and alerts included for reference
+- Two-VM architecture — simple to deploy and reproduce
+- Validated against real internet traffic with confirmed detections
 
 ## Directory Structure
 
@@ -93,7 +93,8 @@ wazuh-netflow-monitoring-poc/
 │   ├── installation.md
 │   ├── configuration.md
 │   ├── detection_logic.md
-│   └── troubleshooting.md
+│   ├── troubleshooting.md
+│   └── portfolio_content.md
 │
 ├── configs/
 │   ├── pmacctd/
@@ -129,37 +130,51 @@ wazuh-netflow-monitoring-poc/
 Refer to [docs/installation.md](docs/installation.md) for detailed setup instructions. High-level steps:
 
 1. Deploy VM 1 with Wazuh All-in-One (Manager + Indexer + Dashboard).
-2. Deploy VM 2 with a Linux OS (Ubuntu 22.04 or similar).
+2. Deploy VM 2 with Ubuntu 22.04.
 3. Install the Wazuh Agent on VM 2 and register it with the Manager.
 4. Install pmacctd on VM 2.
-5. Deploy the Python normalization script.
-6. Add the custom decoder and rules to the Wazuh Manager.
+5. Deploy the Python normalization script to `/opt/netflow/`.
+6. Add the custom rules to the Wazuh Manager.
 7. Configure the Wazuh Agent to monitor the normalized log file.
-8. Restart services and verify the data pipeline.
+8. Set up a cron job to run the normalization script every minute.
+9. Restart services and verify the data pipeline.
 
 ## Configuration
 
-Refer to [docs/configuration.md](docs/configuration.md) for detailed configuration. Key files:
+Key files:
 
-- **pmacctd**: `/etc/pmacct/pmacctd.conf` - captures traffic metadata and writes raw JSON.
-- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` - converts raw data to normalized format.
-- **Wazuh Agent**: `ossec.conf` localfile block - monitors `/var/log/netflow/netflow_wazuh.json`.
-- **Wazuh Manager**: Custom decoder and rules loaded from `/var/ossec/etc/decoders/` and `/var/ossec/etc/rules/`.
+- **pmacctd**: `/etc/pmacct/pmacctd.conf` — captures traffic with timestamps, writes raw JSON.
+- **Python script**: `/opt/netflow/normalize_netflow_to_wazuh.py` — filters and normalizes raw data.
+- **Wazuh Agent**: `ossec.conf` localfile block — monitors `/var/log/netflow/netflow_wazuh.json`.
+- **Wazuh Rules**: `/var/ossec/etc/rules/netflow_rules.xml` — 24 detection rules.
 
-## Example: Raw NetFlow Log
+### Important: Flat JSON Format
+
+Wazuh 4.x does not support dot notation in rule `<field>` tags for nested JSON. The normalization script outputs **flat JSON** with field names prefixed `nf_` (e.g. `nf_src_ip`, `nf_dst_port`).
+
+### Internal Subnet Filter
+
+Edit `INTERNAL_PREFIX` in the normalization script to match your environment:
+
+```python
+INTERNAL_PREFIX = "160.22."  # adjust to your cloud/lab subnet
+```
+
+## Example: Raw NetFlow Log (pmacctd output)
 
 ```json
 {
   "event_type": "purge",
-  "ip_src": "192.168.10.15",
-  "ip_dst": "185.220.101.34",
-  "port_src": 49832,
-  "port_dst": 443,
+  "ip_src": "87.251.64.25",
+  "ip_dst": "160.22.251.9",
+  "port_src": 15844,
+  "port_dst": 3389,
   "ip_proto": "tcp",
-  "packets": 12,
-  "bytes": 3456,
-  "stamp_inserted": "2025-01-15 10:32:01",
-  "stamp_updated": "2025-01-15 10:32:30"
+  "tos": 0,
+  "timestamp_start": "2026-05-26 09:50:32.000000",
+  "timestamp_end": "0000-00-00 00:00:00.000000",
+  "packets": 5,
+  "bytes": 240
 }
 ```
 
@@ -167,17 +182,15 @@ Refer to [docs/configuration.md](docs/configuration.md) for detailed configurati
 
 ```json
 {
-  "timestamp": "2025-01-15T10:32:01Z",
-  "netflow": {
-    "src_ip": "192.168.10.15",
-    "dst_ip": "185.220.101.34",
-    "src_port": 49832,
-    "dst_port": 443,
-    "protocol": "tcp",
-    "packets": 12,
-    "bytes": 3456,
-    "duration_sec": 29
-  }
+  "timestamp": "2026-05-26T09:50:32Z",
+  "nf_src_ip": "87.251.64.25",
+  "nf_dst_ip": "160.22.251.9",
+  "nf_src_port": "15844",
+  "nf_dst_port": "3389",
+  "nf_protocol": "tcp",
+  "nf_packets": "5",
+  "nf_bytes": "240",
+  "nf_duration": "0"
 }
 ```
 
@@ -185,80 +198,111 @@ Refer to [docs/configuration.md](docs/configuration.md) for detailed configurati
 
 ```json
 {
+  "timestamp": "2026-05-26T16:50:34.984+0700",
   "rule": {
-    "id": "117003",
-    "level": 10,
-    "description": "NetFlow: Suspicious external destination detected",
-    "groups": ["netflow", "network_threat"]
+    "id": "117010",
+    "level": 12,
+    "description": "NetFlow: RDP access attempt from external host 87.251.64.25",
+    "groups": ["netflow", "network_anomaly", "remote_access"]
   },
   "agent": {
     "id": "001",
-    "name": "netflow-collector"
+    "name": "ubnsrv-netflow",
+    "ip": "160.22.251.9"
   },
   "data": {
-    "netflow": {
-      "src_ip": "192.168.10.15",
-      "dst_ip": "185.220.101.34",
-      "dst_port": 443,
-      "protocol": "tcp",
-      "bytes": 3456
-    }
-  },
-  "timestamp": "2025-01-15T10:32:05Z"
+    "nf_src_ip": "87.251.64.25",
+    "nf_dst_ip": "160.22.251.9",
+    "nf_dst_port": "3389",
+    "nf_protocol": "tcp"
+  }
 }
 ```
 
-## Detection Use Cases
+## Detection Rules
 
-| Rule ID | Level | Description                                          |
-|---------|-------|------------------------------------------------------|
-| 117001  | 3     | NetFlow event received (base rule)                   |
-| 117002  | 8     | High connection volume from a single source          |
-| 117003  | 10    | Suspicious external destination detected             |
-| 117004  | 6     | Repeated connection activity to the same destination |
-| 117005  | 7     | Unusual destination port detected                    |
+| Rule ID | Level | Category | Description |
+|---|---|---|---|
+| 117001 | 3 | Base | NetFlow event received |
+| 117002 | 8 | Anomaly | High connection volume from single source |
+| 117003 | 7 | Anomaly | Suspicious destination port detected |
+| 117004 | 6 | Anomaly | Repeated connection to same destination |
+| 117005 | 10 | Exfiltration | Large data transfer detected (>500KB) |
+| 117006 | 8 | DoS | ICMP flood detected |
+| 117007 | 8 | DoS | UDP flood detected |
+| 117008 | 10 | Brute Force | Possible SSH brute force |
+| 117009 | 9 | Recon | Possible port scan |
+| 117010 | 12 | Remote Access | **RDP access attempt** ✅ |
+| 117011 | 10 | Tunneling | High volume DNS — possible tunneling |
+| 117012 | 9 | Lateral Movement | SMB traffic detected |
+| 117013 | 10 | Cleartext | **Telnet connection detected** ✅ |
+| 117014 | 8 | Cleartext | FTP connection detected ✅ |
+| 117015 | 10 | Database | **Database port access from external** ✅ |
+| 117016 | 11 | Evasion | Tor-related port detected |
+| 117017 | 9 | Policy | Cryptocurrency mining port |
+| 117018 | 10 | Exfiltration | High outbound traffic volume |
+| 117019 | 8 | Recon | SNMP traffic detected |
+| 117020 | 9 | Lateral Movement | **NetBIOS traffic detected** ✅ |
+| 117021 | 11 | C2 | Possible C2 beaconing |
+| 117022 | 8 | Remote Access | VNC remote access port detected ✅ |
+| 117023 | 10 | Recon | LDAP reconnaissance detected |
+| 117024 | 12 | Exfiltration | High bytes over DNS — possible exfiltration |
 
-Each rule is documented in detail in [docs/detection_logic.md](docs/detection_logic.md).
+✅ = Confirmed firing against real internet traffic in lab.
+
+## Real Traffic Detection Results
+
+This PoC was validated on a live cloud VM (Ubuntu 22.04, Eranya Cloud). Within hours of deployment, the following real threats were detected:
+
+| Rule | Attacker IP | Finding |
+|---|---|---|
+| 117010 (RDP) | 87.251.64.25 | Automated RDP scanner — 4 hits in <1 second |
+| 117013 (Telnet) | 43.241.37.250, 198.46.134.48 + 6 others | Telnet scanner from 8 different IPs |
+| 117015 (Database) | 45.156.87.127 | MySQL port 3306 scan |
+| 117015 (Database) | 64.89.163.133 | PostgreSQL port 5432 scan |
+| 117020 (NetBIOS) | 103.153.61.85 | NetBIOS broadcast — 29 hits |
+| 117022 (VNC) | 45.227.x.x | VNC port 5900 scan |
+| 117014 (FTP) | 212.73.x.x | FTP port 21 access |
+
+Total alerts in 24 hours: **1,916** — with **187** at level 7 or above.
 
 ## Troubleshooting
 
-Common issues and solutions are documented in [docs/troubleshooting.md](docs/troubleshooting.md), including:
+Refer to [docs/troubleshooting.md](docs/troubleshooting.md) for common issues including:
 
-- Wazuh Agent not forwarding logs
-- Decoder not matching normalized events
-- Rules not triggering alerts
 - pmacctd not capturing traffic
-- Python script errors
+- Normalization script processed 0 records
+- Wazuh Agent not forwarding logs
+- Rules not triggering alerts
+- False positives from multicast/internal traffic
 
-## Limitations
-
-This is a Proof of Concept and has intentional limitations:
+## Known Limitations
 
 - Two-VM architecture is not designed for production scale.
-- pmacctd captures traffic metadata only from the collector VM's interfaces - it does not receive NetFlow exports from network devices.
-- The Python normalization script runs as a scheduled task, not a real-time stream processor.
-- No CDB list or threat intelligence feed is integrated for IP reputation.
-- Rule thresholds are static and not tuned for production environments.
-- No high availability or clustering is configured.
+- pmacctd captures traffic only from the collector VM's local interface.
+- The normalization script runs as a scheduled task (cron), not a real-time stream processor.
+- No CDB list or threat intelligence feed for IP reputation lookup.
+- Rule thresholds are not tuned for high-volume production environments.
+- Internal subnet filter (`INTERNAL_PREFIX`) must be manually adjusted per environment.
 
 ## Future Improvements
 
-- Integrate a CDB list for known malicious IP lookups.
-- Add support for NetFlow v5/v9 exports from network devices.
-- Implement real-time normalization using a file watcher or daemon.
-- Expand detection rules for lateral movement and data exfiltration patterns.
+- Integrate CDB list for known malicious IP lookups.
 - Add MITRE ATT&CK technique mapping to each rule.
+- Implement real-time normalization using a file watcher daemon.
+- Add support for NetFlow v5/v9 exports from network devices.
 - Build a dedicated Wazuh Dashboard visualization for NetFlow alerts.
 - Automate deployment using Ansible or shell scripts.
+- Expand rule 117003 suspicious port list based on threat intelligence.
 
 ## Author
 
 **Dimasqi Ramadhani**
-Security Engineer - Detection Engineering & SIEM
+Security Engineer — Detection Engineering & SIEM
 
-- [Portfolio](https://dimasqiramadhani.com)
-- [GitHub](https://github.com/dimasqiramadhani)
-- [Linkedin](https://linkedin.com/in/dimasqiramadhani)
+- GitHub: [github.com/dimasqiramadhani](https://github.com/dimasqiramadhani)
+- LinkedIn: [linkedin.com/in/dimasqiramadhani](https://linkedin.com/in/dimasqiramadhani)
+- Email: dimasqiramadhani@gmail.com
 
 ## License
 

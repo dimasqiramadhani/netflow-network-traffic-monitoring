@@ -2,15 +2,13 @@
   netflow_decoder.xml
   Custom Wazuh decoder for normalized NetFlow JSON events.
   Place this file in: /var/ossec/etc/decoders/netflow_decoder.xml
+
+  Note: Wazuh 4.x JSON_Decoder automatically parses all flat JSON fields.
+  The built-in 'json' decoder handles field extraction.
+  This decoder is kept for documentation and future customization.
 -->
 
 <decoder name="netflow_json">
   <prematch>^{"timestamp":</prematch>
   <plugin_decoder>JSON_Decoder</plugin_decoder>
-</decoder>
-
-<decoder name="netflow_json_fields">
-  <parent>netflow_json</parent>
-  <plugin_decoder>JSON_Decoder</plugin_decoder>
-  <order>netflow.src_ip,netflow.dst_ip,netflow.src_port,netflow.dst_port,netflow.protocol,netflow.bytes,netflow.packets,netflow.duration_sec</order>
 </decoder>

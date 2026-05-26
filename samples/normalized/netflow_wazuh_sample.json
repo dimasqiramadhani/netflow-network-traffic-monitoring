@@ -1,6 +1,6 @@
-{"timestamp":"2025-01-15T10:32:01Z","netflow":{"src_ip":"192.168.10.15","dst_ip":"185.220.101.34","src_port":49832,"dst_port":443,"protocol":"tcp","packets":12,"bytes":3456,"duration_sec":29}}
-{"timestamp":"2025-01-15T10:33:05Z","netflow":{"src_ip":"192.168.10.15","dst_ip":"93.184.216.34","src_port":50112,"dst_port":80,"protocol":"tcp","packets":8,"bytes":2104,"duration_sec":13}}
-{"timestamp":"2025-01-15T10:33:10Z","netflow":{"src_ip":"192.168.10.20","dst_ip":"192.168.10.1","src_port":22345,"dst_port":53,"protocol":"udp","packets":2,"bytes":128,"duration_sec":0}}
-{"timestamp":"2025-01-15T10:34:00Z","netflow":{"src_ip":"192.168.10.15","dst_ip":"45.33.32.156","src_port":51200,"dst_port":4444,"protocol":"tcp","packets":25,"bytes":8192,"duration_sec":45}}
-{"timestamp":"2025-01-15T10:35:12Z","netflow":{"src_ip":"192.168.10.15","dst_ip":"185.220.101.34","src_port":49900,"dst_port":443,"protocol":"tcp","packets":15,"bytes":4200,"duration_sec":28}}
-{"timestamp":"2025-01-15T10:36:00Z","netflow":{"src_ip":"192.168.10.25","dst_ip":"192.168.10.50","src_port":60100,"dst_port":8080,"protocol":"tcp","packets":5,"bytes":1024,"duration_sec":5}}
+{"timestamp": "2026-05-26T09:50:32Z", "nf_src_ip": "87.251.64.25", "nf_dst_ip": "160.22.251.9", "nf_src_port": "15844", "nf_dst_port": "3389", "nf_protocol": "tcp", "nf_packets": "5", "nf_bytes": "240", "nf_duration": "0"}
+{"timestamp": "2026-05-26T09:43:02Z", "nf_src_ip": "103.153.61.85", "nf_dst_ip": "103.153.61.255", "nf_src_port": "138", "nf_dst_port": "138", "nf_protocol": "udp", "nf_packets": "1", "nf_bytes": "229", "nf_duration": "0"}
+{"timestamp": "2026-05-26T09:52:01Z", "nf_src_ip": "43.241.37.250", "nf_dst_ip": "160.22.251.9", "nf_src_port": "57618", "nf_dst_port": "23", "nf_protocol": "tcp", "nf_packets": "1", "nf_bytes": "40", "nf_duration": "0"}
+{"timestamp": "2026-05-26T09:52:01Z", "nf_src_ip": "45.156.87.127", "nf_dst_ip": "160.22.251.9", "nf_src_port": "53992", "nf_dst_port": "3306", "nf_protocol": "tcp", "nf_packets": "1", "nf_bytes": "40", "nf_duration": "0"}
+{"timestamp": "2026-05-26T09:50:32Z", "nf_src_ip": "64.89.163.133", "nf_dst_ip": "160.22.251.9", "nf_src_port": "47761", "nf_dst_port": "5432", "nf_protocol": "tcp", "nf_packets": "1", "nf_bytes": "44", "nf_duration": "0"}
+{"timestamp": "2026-05-26T09:53:01Z", "nf_src_ip": "198.46.134.48", "nf_dst_ip": "160.22.251.9", "nf_src_port": "4018", "nf_dst_port": "23", "nf_protocol": "tcp", "nf_packets": "1", "nf_bytes": "40", "nf_duration": "0"}
