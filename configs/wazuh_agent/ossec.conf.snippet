@@ -1,0 +1,7 @@
+<!-- Add this block inside <ossec_config> in /var/ossec/etc/ossec.conf on VM 2 -->
+<!-- This tells the Wazuh Agent to monitor the normalized NetFlow log file -->
+
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/netflow/netflow_wazuh.json</location>
+</localfile>

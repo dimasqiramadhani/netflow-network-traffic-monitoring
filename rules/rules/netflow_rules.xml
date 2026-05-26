@@ -1,0 +1,49 @@
+<!--
+  netflow_rules.xml
+  Custom Wazuh rules for NetFlow detection.
+  Place this file in: /var/ossec/etc/rules/netflow_rules.xml
+  Rule ID range: 117000 - 117009
+-->
+
+<group name="netflow,">
+
+  <!-- Base rule: matches any decoded NetFlow event -->
+  <rule id="117001" level="3">
+    <decoded_as>netflow_json</decoded_as>
+    <description>NetFlow: Network flow event received</description>
+    <group>netflow,</group>
+  </rule>
+
+  <!-- High connection volume from a single source IP -->
+  <rule id="117002" level="8" frequency="20" timeframe="60">
+    <if_matched_sid>117001</if_matched_sid>
+    <same_field>netflow.src_ip</same_field>
+    <description>NetFlow: High connection volume from $(netflow.src_ip)</description>
+    <group>netflow,network_anomaly,</group>
+  </rule>
+
+  <!-- Suspicious external destination (non-RFC1918) with repeated activity -->
+  <rule id="117003" level="10" frequency="5" timeframe="120">
+    <if_sid>117001</if_sid>
+    <field name="netflow.dst_ip" negate="yes">^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.</field>
+    <description>NetFlow: Suspicious external destination detected - $(netflow.dst_ip)</description>
+    <group>netflow,network_threat,</group>
+  </rule>
+
+  <!-- Repeated connection activity to the same destination -->
+  <rule id="117004" level="6" frequency="10" timeframe="120">
+    <if_matched_sid>117001</if_matched_sid>
+    <same_field>netflow.dst_ip</same_field>
+    <description>NetFlow: Repeated connection activity to $(netflow.dst_ip)</description>
+    <group>netflow,network_anomaly,</group>
+  </rule>
+
+  <!-- Unusual destination port associated with backdoors or offensive tools -->
+  <rule id="117005" level="7">
+    <if_sid>117001</if_sid>
+    <field name="netflow.dst_port">^(4444|5555|6666|7777|8888|9999|1337|31337)$</field>
+    <description>NetFlow: Unusual destination port $(netflow.dst_port) detected</description>
+    <group>netflow,network_anomaly,</group>
+  </rule>
+
+</group>

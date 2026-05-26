@@ -1,0 +1,6 @@
+{"event_type":"purge","ip_src":"192.168.10.15","ip_dst":"185.220.101.34","port_src":49832,"port_dst":443,"ip_proto":"tcp","packets":12,"bytes":3456,"stamp_inserted":"2025-01-15 10:32:01","stamp_updated":"2025-01-15 10:32:30"}
+{"event_type":"purge","ip_src":"192.168.10.15","ip_dst":"93.184.216.34","port_src":50112,"port_dst":80,"ip_proto":"tcp","packets":8,"bytes":2104,"stamp_inserted":"2025-01-15 10:33:05","stamp_updated":"2025-01-15 10:33:18"}
+{"event_type":"purge","ip_src":"192.168.10.20","ip_dst":"192.168.10.1","port_src":22345,"port_dst":53,"ip_proto":"udp","packets":2,"bytes":128,"stamp_inserted":"2025-01-15 10:33:10","stamp_updated":"2025-01-15 10:33:10"}
+{"event_type":"purge","ip_src":"192.168.10.15","ip_dst":"45.33.32.156","port_src":51200,"port_dst":4444,"ip_proto":"tcp","packets":25,"bytes":8192,"stamp_inserted":"2025-01-15 10:34:00","stamp_updated":"2025-01-15 10:34:45"}
+{"event_type":"purge","ip_src":"192.168.10.15","ip_dst":"185.220.101.34","port_src":49900,"port_dst":443,"ip_proto":"tcp","packets":15,"bytes":4200,"stamp_inserted":"2025-01-15 10:35:12","stamp_updated":"2025-01-15 10:35:40"}
+{"event_type":"purge","ip_src":"192.168.10.25","ip_dst":"192.168.10.50","port_src":60100,"port_dst":8080,"ip_proto":"tcp","packets":5,"bytes":1024,"stamp_inserted":"2025-01-15 10:36:00","stamp_updated":"2025-01-15 10:36:05"}

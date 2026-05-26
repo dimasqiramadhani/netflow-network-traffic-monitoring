@@ -1,0 +1,14 @@
+<!-- No additional ossec.conf changes are required on the Wazuh Manager for this PoC. -->
+<!-- Custom decoders and rules are loaded automatically from: -->
+<!--   /var/ossec/etc/decoders/netflow_decoder.xml -->
+<!--   /var/ossec/etc/rules/netflow_rules.xml -->
+
+<!-- If you need to explicitly include the decoder and rules files, -->
+<!-- add the following inside <ossec_config> in /var/ossec/etc/ossec.conf: -->
+
+<!--
+<ruleset>
+  <decoder_dir>etc/decoders</decoder_dir>
+  <rule_dir>etc/rules</rule_dir>
+</ruleset>
+-->

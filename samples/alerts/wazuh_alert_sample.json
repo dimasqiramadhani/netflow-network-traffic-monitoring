@@ -1,0 +1,104 @@
+{
+  "timestamp": "2025-01-15T10:32:05Z",
+  "rule": {
+    "id": "117001",
+    "level": 3,
+    "description": "NetFlow: Network flow event received",
+    "groups": ["netflow"]
+  },
+  "agent": {
+    "id": "001",
+    "name": "netflow-collector",
+    "ip": "192.168.10.100"
+  },
+  "manager": {
+    "name": "wazuh-server"
+  },
+  "data": {
+    "timestamp": "2025-01-15T10:32:01Z",
+    "netflow": {
+      "src_ip": "192.168.10.15",
+      "dst_ip": "185.220.101.34",
+      "src_port": 49832,
+      "dst_port": 443,
+      "protocol": "tcp",
+      "packets": 12,
+      "bytes": 3456,
+      "duration_sec": 29
+    }
+  },
+  "decoder": {
+    "name": "netflow_json"
+  },
+  "location": "/var/log/netflow/netflow_wazuh.json"
+}
+
+{
+  "timestamp": "2025-01-15T10:34:02Z",
+  "rule": {
+    "id": "117005",
+    "level": 7,
+    "description": "NetFlow: Unusual destination port 4444 detected",
+    "groups": ["netflow", "network_anomaly"]
+  },
+  "agent": {
+    "id": "001",
+    "name": "netflow-collector",
+    "ip": "192.168.10.100"
+  },
+  "manager": {
+    "name": "wazuh-server"
+  },
+  "data": {
+    "timestamp": "2025-01-15T10:34:00Z",
+    "netflow": {
+      "src_ip": "192.168.10.15",
+      "dst_ip": "45.33.32.156",
+      "src_port": 51200,
+      "dst_port": 4444,
+      "protocol": "tcp",
+      "packets": 25,
+      "bytes": 8192,
+      "duration_sec": 45
+    }
+  },
+  "decoder": {
+    "name": "netflow_json"
+  },
+  "location": "/var/log/netflow/netflow_wazuh.json"
+}
+
+{
+  "timestamp": "2025-01-15T10:35:15Z",
+  "rule": {
+    "id": "117003",
+    "level": 10,
+    "description": "NetFlow: Suspicious external destination detected - 185.220.101.34",
+    "groups": ["netflow", "network_threat"]
+  },
+  "agent": {
+    "id": "001",
+    "name": "netflow-collector",
+    "ip": "192.168.10.100"
+  },
+  "manager": {
+    "name": "wazuh-server"
+  },
+  "data": {
+    "timestamp": "2025-01-15T10:35:12Z",
+    "netflow": {
+      "src_ip": "192.168.10.15",
+      "dst_ip": "185.220.101.34",
+      "src_port": 49900,
+      "dst_port": 443,
+      "protocol": "tcp",
+      "packets": 15,
+      "bytes": 4200,
+      "duration_sec": 28
+    }
+  },
+  "decoder": {
+    "name": "netflow_json"
+  },
+  "location": "/var/log/netflow/netflow_wazuh.json"
+}
