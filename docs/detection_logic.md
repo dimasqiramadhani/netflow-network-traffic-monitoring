@@ -106,12 +106,13 @@ File: `rules/rules/netflow_rules.xml`
 
 ## Rule Dependency Chain
 
-```
-117001 (Base: NetFlow event received)
-  ├── 117002 (Frequency: High volume from same source)
-  ├── 117003 (Field match: External destination + frequency)
-  ├── 117004 (Frequency: Repeated connections to same destination)
-  └── 117005 (Field match: Suspicious destination port)
+```mermaid
+flowchart TD
+    A["117001\nNetFlow event received\n(Level 3 — Base Rule)"]
+    A --> B["117002\nHigh connection volume\nfrom same source\n(Level 8 — Frequency)"]
+    A --> C["117003\nSuspicious external\ndestination detected\n(Level 10 — Field + Frequency)"]
+    A --> D["117004\nRepeated connection\nto same destination\n(Level 6 — Frequency)"]
+    A --> E["117005\nUnusual destination\nport detected\n(Level 7 — Field Match)"]
 ```
 
 All detection rules depend on rule 117001. If the base rule does not match (because the decoder failed or the event format is wrong), none of the child rules will fire.

@@ -36,36 +36,25 @@ This VM serves a dual purpose. It acts as a Wazuh Agent endpoint and also runs t
 
 ## Data Flow Diagram
 
-```
-  Network Traffic
-        │
-        ▼
-  ┌───────────┐
-  │  pmacctd  │  (VM 2)
-  └─────┬─────┘
-        │ Raw JSON
-        ▼
-  ┌───────────────────┐
-  │  Python normalizer│  (VM 2)
-  └─────┬─────────────┘
-        │ Normalized JSON
-        ▼
-  ┌───────────────────┐
-  │  Wazuh Agent      │  (VM 2)
-  └─────┬─────────────┘
-        │ Agent connection (1514/TCP)
-        ▼
-  ┌───────────────────┐
-  │  Wazuh Manager    │  (VM 1)
-  │  → Decoder        │
-  │  → Rules          │
-  │  → Alerts         │
-  └─────┬─────────────┘
-        │
-        ▼
-  ┌───────────────────┐
-  │  Wazuh Dashboard  │  (VM 1)
-  └───────────────────┘
+```mermaid
+flowchart TD
+    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
+        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+        B -->|"Raw JSON"| C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
+        C --> D["Python Normalization Script"]
+        D -->|"Normalized JSON"| E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
+        E --> F["Wazuh Agent\n(Log Monitoring & Forwarding)"]
+    end
+
+    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
+        G["Wazuh Manager\n(Log Ingestion)"]
+        G --> H["Custom Decoder\n(netflow_decoder.xml)"]
+        H --> I["Custom Rules\n(117001 – 117005)"]
+        I --> J["Wazuh Indexer\n(Alert Storage)"]
+        J --> K["Wazuh Dashboard\n(Alert Visualization)"]
+    end
+
+    F -- "Agent Connection\n(1514/TCP)" --> G
 ```
 
 ## Network Requirements

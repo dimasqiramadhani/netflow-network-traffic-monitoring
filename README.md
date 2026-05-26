@@ -22,51 +22,25 @@ Show that Wazuh can be extended to monitor network flow metadata using open-sour
 
 ## Architecture Overview
 
-```
-┌──────────────────────────────────────────────┐
-│              VM 1 — Wazuh Server             │
-│         (All-in-One: Manager + Indexer       │
-│              + Dashboard)                    │
-│                                              │
-│  ┌─────────────┐   ┌──────────────────────┐  │
-│  │   Custom     │   │   Custom Wazuh       │  │
-│  │   Decoder    │──▶│   Rules (117000+)    │  │
-│  └─────────────┘   └──────────────────────┘  │
-│         ▲                      │              │
-│         │                      ▼              │
-│  Receives logs          Generates alerts      │
-│  from Agent             in Wazuh Dashboard    │
-└──────────────┬───────────────────────────────┘
-               │
-          Agent ──▶ Manager
-          (1514/TCP)
-               │
-┌──────────────┴───────────────────────────────┐
-│        VM 2 — Linux Agent + NetFlow          │
-│                 Collector                    │
-│                                              │
-│  ┌──────────┐   ┌──────────────────────────┐ │
-│  │ pmacctd  │──▶│ Raw flow log             │ │
-│  │          │   │ /var/log/netflow/         │ │
-│  └──────────┘   │   netflow_raw.json       │ │
-│                 └────────────┬─────────────┘ │
-│                              ▼               │
-│                 ┌──────────────────────────┐ │
-│                 │ Python normalization     │ │
-│                 │ script                   │ │
-│                 └────────────┬─────────────┘ │
-│                              ▼               │
-│                 ┌──────────────────────────┐ │
-│                 │ Normalized log           │ │
-│                 │ /var/log/netflow/         │ │
-│                 │   netflow_wazuh.json     │ │
-│                 └────────────┬─────────────┘ │
-│                              ▼               │
-│                 ┌──────────────────────────┐ │
-│                 │ Wazuh Agent              │ │
-│                 │ (monitors log file)      │ │
-│                 └──────────────────────────┘ │
-└──────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph VM2["VM 2 — Linux Agent + NetFlow Collector"]
+        A["🌐 Network Traffic"] --> B["pmacctd\n(Traffic Metadata Capture)"]
+        B --> C["Raw Flow Log\n/var/log/netflow/netflow_raw.json"]
+        C --> D["Python Normalization Script"]
+        D --> E["Normalized Log\n/var/log/netflow/netflow_wazuh.json"]
+        E --> F["Wazuh Agent\n(Log Monitoring & Forwarding)"]
+    end
+
+    subgraph VM1["VM 1 — Wazuh All-in-One Server"]
+        G["Wazuh Manager\n(Log Ingestion)"]
+        G --> H["Custom Decoder\n(netflow_decoder.xml)"]
+        H --> I["Custom Rules\n(117001 – 117005)"]
+        I --> J["Wazuh Indexer\n(Alert Storage)"]
+        J --> K["Wazuh Dashboard\n(Alert Visualization)"]
+    end
+
+    F -- "Agent Connection\n(1514/TCP)" --> G
 ```
 
 ## Data Flow
