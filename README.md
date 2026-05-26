@@ -1,35 +1,8 @@
 # Wazuh NetFlow Monitoring PoC
 
+![Cover Image](screenshots/Cover%20Image.png)
+
 Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules - built on a simple two-VM architecture and validated against real internet traffic.
-
-## Screenshots
-
-### Dashboard Overview
-![Dashboard Overview](screenshots/Dashboard%20Overview.png)
-
-### High Severity Alerts (Level 9+)
-![High Severity](screenshots/High%20Severity%20Level%209+.png)
-
-### External Threats Only
-![External Threats](screenshots/Eksternal%20Threat%20Only.png)
-
-### Top Attacker IPs
-![Top Attacker IPs](screenshots/Top%20Attacker%20IPs.png)
-
-### Logtest - RDP Rule 117010 (Level 12)
-![Logtest RDP](screenshots/Wazuh%20Logtest%20RDP%20Alerts.png)
-
-### Logtest - Telnet Rule 117013 (Level 10)
-![Logtest Telnet](screenshots/Wazuh%20Logtest%20Telnet%20Alerts.png)
-
-### Logtest - Database Rule 117015 (Level 10)
-![Logtest Database](screenshots/Wazuh%20Logtest%20Database%20Alerts.png)
-
-### Logtest - Suspicious Port Rule 117003 (Level 7)
-![Logtest Suspicious Port](screenshots/Wazuh%20Logtest%20Suspicious%20Alerts.png)
-
-### Logtest - NetBIOS Rule 117020 (Level 9)
-![Logtest NetBIOS](screenshots/Wazuh%20Logtest%20NetBios%20Alerts.png)
 
 ## Project Description
 
