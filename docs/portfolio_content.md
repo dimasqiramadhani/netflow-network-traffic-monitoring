@@ -10,7 +10,7 @@ Wazuh NetFlow Monitoring PoC - network flow visibility with pmacctd, Python norm
 
 **Wazuh NetFlow Monitoring PoC**
 
-Built a working detection pipeline that integrates network flow metadata into Wazuh SIEM using open-source tools on a two-VM architecture.
+Built a working detection pipeline that integrates network flow metadata into Wazuh SIEM using open-source tools on a two VM architecture.
 
 The pipeline uses pmacctd to capture traffic metadata on a Linux endpoint, a Python normalization script to convert raw flow data into structured flat JSON, and 24 custom Wazuh detection rules covering threats from RDP scanning to DNS exfiltration.
 
@@ -26,7 +26,7 @@ Technologies: Wazuh SIEM 4.14, pmacctd 1.7.6, Python 3, OpenSearch Dashboard, cu
 
 Just published a new project: Wazuh NetFlow Monitoring PoC.
 
-I built a detection pipeline that brings network flow visibility into Wazuh SIEM - from raw traffic capture to dashboard alerts - using a simple two-VM setup.
+I built a detection pipeline that brings network flow visibility into Wazuh SIEM - from raw traffic capture to dashboard alerts - using a simple two VM setup.
 
 The pipeline:
 → pmacctd captures traffic metadata with timestamps

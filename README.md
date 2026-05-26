@@ -2,7 +2,7 @@
 
 ![Cover Image](screenshots/Cover%20Image.png)
 
-Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules - built on a simple two-VM architecture and validated against real internet traffic.
+Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, custom decoders, and 24 detection rules - built on a simple two VM architecture and validated against real internet traffic.
 
 ## Project Description
 
@@ -77,7 +77,7 @@ flowchart TD
 - Automatic filtering of multicast, broadcast, loopback, and internal traffic
 - 24 custom Wazuh detection rules (ID 117001–117024)
 - Full data pipeline from capture to dashboard alert
-- Two-VM architecture - simple to deploy and reproduce
+- two VM architecture - simple to deploy and reproduce
 - Validated against real internet traffic with confirmed detections
 
 ## Directory Structure
