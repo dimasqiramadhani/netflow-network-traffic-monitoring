@@ -6,7 +6,7 @@
 
 **Checks:**
 1. Verify pmacctd is running: `ps aux | grep pmacctd | grep -v grep`
-2. Check the correct interface: `ip link show` - set `pcap_interface` accordingly
+2. Check the correct interface: `ip link show`, then set `pcap_interface` accordingly
 3. Ensure the log directory exists: `ls -la /var/log/netflow/`
 4. Run in foreground for debugging: `sudo pmacctd -f /etc/pmacct/pmacctd.conf` (remove `-D` from daemonize or run without config's daemonize)
 5. Generate test traffic: `curl -s https://example.com > /dev/null` and check if raw logs appear
@@ -26,7 +26,7 @@ aggregate: src_host, dst_host, src_port, dst_port, proto, tos, timestamp_start, 
 cat /var/log/netflow/.last_processed_line
 wc -l /var/log/netflow/netflow_raw.json
 ```
-2. If marker equals line count, no new data - wait for pmacctd to flush (60 seconds)
+2. If marker equals line count, no new data, wait for pmacctd to flush (60 seconds)
 3. If marker is larger than line count (log was rotated), reset: `sudo rm -f /var/log/netflow/.last_processed_line`
 4. Check raw log has data: `tail -2 /var/log/netflow/netflow_raw.json`
 
@@ -66,7 +66,7 @@ INTERNAL_PREFIX = "192.168."
 1. Test with wazuh-logtest: `sudo /var/ossec/bin/wazuh-logtest`
 2. Paste a sample normalized log line
 3. Verify rules file is valid: `sudo /var/ossec/bin/wazuh-analysisd -t 2>&1 | tail -5`
-4. For frequency-based rules (117002, 117004, etc.), a single test event only triggers the base rule (117001)
+4. For frequency based rules (117002, 117004, etc.), a single test event only triggers the base rule (117001)
 
 ## OpenSearch Scripted Fields
 
@@ -98,7 +98,7 @@ Use `nf_bytes_num` and `nf_packets_num` in visualizations instead of the origina
 | Broadcast (255.255.255.255)       | Already filtered in script          |
 | Internal VM traffic (same subnet) | Set `INTERNAL_PREFIX` correctly     |
 | Wazuh agent traffic (port 1514)   | Filtered via internal subnet prefix |
-| IPv6 link-local (fe80::)          | Already filtered in script          |
+| IPv6 link local (fe80::)          | Already filtered in script          |
 
 **Rule 117021 (C2 Beaconing) false positives:**
 This rule fires on any repeated connections to the same destination. Internal service traffic (monitoring, backups) can trigger it. Add specific IPs to `EXCLUDED_IPS` in the normalization script if needed.

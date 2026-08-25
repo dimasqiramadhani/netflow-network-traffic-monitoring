@@ -1,23 +1,7 @@
-# Python
 __pycache__/
-*.py[cod]
-*.egg-info/
-venv/
-.env
-
-# Logs
-*.log
-/var/log/netflow/
-
-# OS files
+*.pyc
 .DS_Store
-Thumbs.db
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Wazuh working files
-.last_processed_line
+# never commit real environment values
+.env
+*.local.*

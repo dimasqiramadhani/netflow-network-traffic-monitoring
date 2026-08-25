@@ -13,11 +13,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -25,7 +25,7 @@
     "data": {
       "timestamp": "2026-05-26T09:43:02Z",
       "nf_src_ip": "87.251.64.25",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "54821",
       "nf_dst_port": "3389",
       "nf_protocol": "tcp",
@@ -52,11 +52,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -64,7 +64,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:34Z",
       "nf_src_ip": "87.251.64.25",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "54821",
       "nf_dst_port": "3389",
       "nf_protocol": "tcp",
@@ -78,7 +78,7 @@
     "timestamp": "2026-05-26T16:50:36.259+0700",
     "rule": {
       "level": 11,
-      "description": "NetFlow: Possible C2 beaconing to 160.22.251.9 from 185.224.128.16",
+      "description": "NetFlow: Possible C2 beaconing to <COLLECTOR_IP> from 185.224.128.16",
       "id": "117021",
       "frequency": 10,
       "firedtimes": 3,
@@ -91,11 +91,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -103,7 +103,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:36Z",
       "nf_src_ip": "185.224.128.16",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "48640",
       "nf_dst_port": "59983",
       "nf_protocol": "tcp",
@@ -129,11 +129,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -155,7 +155,7 @@
     "timestamp": "2026-05-26T16:50:34.000+0700",
     "rule": {
       "level": 10,
-      "description": "NetFlow: Telnet connection detected from 43.241.37.250 to 160.22.251.9",
+      "description": "NetFlow: Telnet connection detected from 43.241.37.250 to <COLLECTOR_IP>",
       "id": "117013",
       "firedtimes": 3,
       "mail": false,
@@ -167,11 +167,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -179,7 +179,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:34Z",
       "nf_src_ip": "43.241.37.250",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "54123",
       "nf_dst_port": "23",
       "nf_protocol": "tcp",
@@ -205,11 +205,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -217,7 +217,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:34Z",
       "nf_src_ip": "64.89.163.133",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "41233",
       "nf_dst_port": "5432",
       "nf_protocol": "tcp",
@@ -242,11 +242,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -254,7 +254,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:34Z",
       "nf_src_ip": "103.153.61.85",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "45123",
       "nf_dst_port": "8443",
       "nf_protocol": "tcp",
@@ -280,11 +280,11 @@
     },
     "agent": {
       "id": "001",
-      "name": "ubnsrv-netflow",
-      "ip": "160.22.251.9"
+      "name": "<AGENT_NAME>",
+      "ip": "<COLLECTOR_IP>"
     },
     "manager": {
-      "name": "ubnsrv-aio-wzh"
+      "name": "<MANAGER_NAME>"
     },
     "decoder": {
       "name": "json"
@@ -292,7 +292,7 @@
     "data": {
       "timestamp": "2026-05-26T09:50:34Z",
       "nf_src_ip": "45.227.10.15",
-      "nf_dst_ip": "160.22.251.9",
+      "nf_dst_ip": "<COLLECTOR_IP>",
       "nf_src_port": "43210",
       "nf_dst_port": "5900",
       "nf_protocol": "tcp",

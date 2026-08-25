@@ -22,7 +22,7 @@ Wazuh 4.x does not support dot notation (e.g. `netflow.dst_port`) in rule `<fiel
 
 ## OpenSearch Scripted Fields
 
-Because index mapping locks field types on first ingestion, if `nf_bytes` and `nf_packets` were indexed as strings before the integer fix, create scripted fields in OpenSearch Dashboard:
+The Wazuh JSON decoder converts every decoded value to a string before it reaches the alert `data` block, so `data.nf_bytes` and `data.nf_packets` are indexed as strings no matter what type the normalization script emits. Numeric aggregation therefore needs scripted fields:
 
 **nf_bytes_num:**
 ```
@@ -41,39 +41,39 @@ These scripted fields enable Sum aggregation for traffic volume visualizations.
 | Rule ID | Level | Category         | Description                               | Lab Confirmed |
 |---------|-------|------------------|-------------------------------------------|---------------|
 | 117001  | 3     | Base             | NetFlow event received                    | Confirmed     |
-| 117002  | 8     | Anomaly          | High connection volume from single source | -             |
+| 117002  | 8     | Anomaly          | High connection volume from single source | Confirmed     |
 | 117003  | 7     | Anomaly          | Suspicious destination port               | Confirmed     |
-| 117004  | 6     | Anomaly          | Repeated connection to same destination   | -             |
-| 117005  | 10    | Exfiltration     | Large data transfer (>500KB)              | -             |
-| 117006  | 8     | DoS              | ICMP flood                                | -             |
-| 117007  | 8     | DoS              | UDP flood                                 | -             |
+| 117004  | 6     | Anomaly          | Repeated connection to same destination   | Confirmed     |
+| 117005  | 10    | Exfiltration     | Large data transfer (>500KB)              | not observed  |
+| 117006  | 8     | DoS              | ICMP flood                                | not observed  |
+| 117007  | 8     | DoS              | UDP flood                                 | not observed  |
 | 117008  | 10    | Brute Force      | SSH brute force                           | Confirmed     |
-| 117009  | 9     | Recon            | Port scan                                 | -             |
+| 117009  | 9     | Recon            | Port scan                                 | not observed  |
 | 117010  | 12    | Remote Access    | RDP access attempt                        | Confirmed     |
-| 117011  | 10    | Tunneling        | High volume DNS - possible tunneling      | -             |
-| 117012  | 9     | Lateral Movement | SMB traffic                               | Confirmed     |
+| 117011  | 10    | Tunneling        | High volume DNS, possible tunneling      | not observed  |
+| 117012  | 9     | Lateral Movement | SMB traffic                               | not observed  |
 | 117013  | 10    | Cleartext        | Telnet connection                         | Confirmed     |
-| 117014  | 8     | Cleartext        | FTP connection                            | Confirmed     |
+| 117014  | 8     | Cleartext        | FTP connection                            | not observed  |
 | 117015  | 10    | Database         | Database port access from external        | Confirmed     |
-| 117016  | 11    | Evasion          | Tor-related port                          | -             |
-| 117017  | 9     | Policy           | Cryptocurrency mining port                | -             |
-| 117018  | 10    | Exfiltration     | High outbound traffic volume              | -             |
-| 117019  | 8     | Recon            | SNMP reconnaissance                       | -             |
+| 117016  | 11    | Evasion          | Tor related port                          | not observed  |
+| 117017  | 9     | Policy           | Cryptocurrency mining port                | not observed  |
+| 117018  | 10    | Exfiltration     | High outbound traffic volume              | Confirmed     |
+| 117019  | 8     | Recon            | SNMP reconnaissance                       | not observed  |
 | 117020  | 9     | Lateral Movement | NetBIOS traffic                           | Confirmed     |
 | 117021  | 11    | C2               | Possible C2 beaconing                     | Confirmed     |
 | 117022  | 8     | Remote Access    | VNC remote access                         | Confirmed     |
-| 117023  | 10    | Recon            | LDAP reconnaissance                       | -             |
-| 117024  | 12    | Exfiltration     | High bytes over DNS                       | -             |
+| 117023  | 10    | Recon            | LDAP reconnaissance                       | not observed  |
+| 117024  | 12    | Exfiltration     | High bytes over DNS                       | not observed  |
 
 ## Rule Dependency Chain
 
 ```mermaid
 flowchart TD
-    A["117001 - Base Rule\nNetFlow event received\nLevel 3"]
+    A["117001 - Base Rule Real Data\nNetFlow event received\nLevel 3"]
 
-    A --> B["117002 - High Volume\nLevel 8 · Frequency"]
+    A --> B["117002 - High Volume Real Data\nLevel 8 · Frequency"]
     A --> C["117003 - Suspicious Port Real Data\nLevel 7 · Field Match"]
-    A --> D["117004 - Repeated Dst\nLevel 6 · Frequency"]
+    A --> D["117004 - Repeated Dst Real Data\nLevel 6 · Frequency"]
     A --> E["117005 - Large Transfer\nLevel 10 · Field Match"]
     A --> F["117006 - ICMP Flood\nLevel 8 · Frequency"]
     A --> G["117007 - UDP Flood\nLevel 8 · Frequency"]
@@ -81,13 +81,13 @@ flowchart TD
     A --> I["117009 - Port Scan\nLevel 9 · Frequency"]
     A --> J["117010 - RDP Exposure Real Data\nLevel 12 · Frequency"]
     A --> K["117011 - DNS Tunneling\nLevel 10 · Frequency"]
-    A --> L["117012 - SMB Lateral Real Data\nLevel 9 · Field Match"]
+    A --> L["117012 - SMB Lateral\nLevel 9 · Field Match"]
     A --> M["117013 - Telnet Real Data\nLevel 10 · Field Match"]
-    A --> N["117014 - FTP Real Data\nLevel 8 · Field Match"]
+    A --> N["117014 - FTP\nLevel 8 · Field Match"]
     A --> O["117015 - DB Port Real Data\nLevel 10 · Field Match"]
     A --> P["117016 - Tor\nLevel 11 · Field Match"]
     A --> Q["117017 - CryptoMining\nLevel 9 · Field Match"]
-    A --> R["117018 - High Outbound\nLevel 10 · Frequency"]
+    A --> R["117018 - High Outbound Real Data\nLevel 10 · Frequency"]
     A --> S["117019 - SNMP Recon\nLevel 8 · Field Match"]
     A --> T["117020 - NetBIOS Real Data\nLevel 9 · Field Match"]
     A --> U["117021 - C2 Beacon Real Data\nLevel 11 · Frequency"]
@@ -96,7 +96,7 @@ flowchart TD
     A --> X["117024 - DNS Exfil\nLevel 12 · Field Match"]
 ```
 
-Real Data = Confirmed firing against real internet traffic in lab.
+Real Data marks a rule seen firing against real traffic, matching the Lab Confirmed column above. The evidence is the dashboard breakdown in `screenshots/Dashboard_Overview.png` and the captures in `samples/alerts/`.
 
 ## Real Traffic Detection Results
 
@@ -104,16 +104,22 @@ VM exposed to internet on Eranya Cloud. Within hours, automated scanners detecte
 
 | Timestamp | Rule       | Attacker IP    | Finding                           |
 |-----------|------------|----------------|-----------------------------------|
-| 16:50:34  | 117010 L12 | 87.251.64.25   | RDP scanner - 4 hits in <1 second |
+| 16:50:34  | 117010 L12 | 87.251.64.25   | RDP scanner, 4 hits in <1 second |
 | 16:52:02  | 117013 L10 | 43.241.37.250  | Telnet scan port 23               |
 | 16:53:02  | 117013 L10 | 198.46.134.48  | Telnet scan port 23               |
 | 16:52:02  | 117015 L10 | 45.156.87.127  | MySQL port 3306 scan              |
 | 16:50:35  | 117015 L10 | 64.89.163.133  | PostgreSQL port 5432 scan         |
-| 17:08:14  | 117020 L9  | 103.153.61.85  | NetBIOS broadcast - 2,425 hits    |
+| 17:08:14  | 117020 L9  | 103.153.61.85  | NetBIOS traffic, 2,470 hits port 137 |
 | 16:50:36  | 117021 L11 | 185.224.128.16 | C2 beaconing pattern              |
 | 16:50:34  | 117022 L8  | 45.227.10.15   | VNC port 5900 scan                |
 
-**Total alerts in ~5 hours: 2,490 - with 982 at level 9 or above.**
+**Total firing events over 24 hours: 4,472, across 10 threat categories.**
+
+Taken from the dashboard capture in `screenshots/Dashboard_Overview.png`. The rules seen
+firing there are 117001, 117002, 117003, 117004, 117008, 117010, 117013, 117018, 117020,
+and 117021, with 117015 and 117022 present in the alert samples. The single NetBIOS source
+accounts for most of the total, so the count reflects one noisy talker more than it
+reflects breadth of detection.
 
 ## Testing Rules
 
@@ -125,12 +131,12 @@ sudo /var/ossec/bin/wazuh-logtest
 
 Test RDP scanner (rule 117010):
 ```
-{"timestamp":"2026-05-26T09:50:32Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"160.22.251.9","nf_src_port":15844,"nf_dst_port":3389,"nf_protocol":"tcp","nf_packets":5,"nf_bytes":240,"nf_duration":0}
+{"timestamp":"2026-05-26T09:50:32Z","nf_src_ip":"87.251.64.25","nf_dst_ip":"<COLLECTOR_IP>","nf_src_port":15844,"nf_dst_port":3389,"nf_protocol":"tcp","nf_packets":5,"nf_bytes":240,"nf_duration":0}
 ```
 
 Test Telnet (rule 117013):
 ```
-{"timestamp":"2026-05-26T09:52:01Z","nf_src_ip":"43.241.37.250","nf_dst_ip":"160.22.251.9","nf_src_port":57618,"nf_dst_port":23,"nf_protocol":"tcp","nf_packets":1,"nf_bytes":40,"nf_duration":0}
+{"timestamp":"2026-05-26T09:52:01Z","nf_src_ip":"43.241.37.250","nf_dst_ip":"<COLLECTOR_IP>","nf_src_port":57618,"nf_dst_port":23,"nf_protocol":"tcp","nf_packets":1,"nf_bytes":40,"nf_duration":0}
 ```
 
 Test NetBIOS (rule 117020):

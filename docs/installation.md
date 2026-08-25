@@ -2,17 +2,17 @@
 
 ## Prerequisites
 
-- Two virtual machines running Ubuntu 22.04 LTS (or a compatible Linux distribution).
-- Network connectivity between both VMs.
-- Root or sudo access on both VMs.
-- Internet access for package installation.
+* Two virtual machines running Ubuntu 22.04 LTS (or a compatible Linux distribution).
+* Network connectivity between both VMs.
+* Root or sudo access on both VMs.
+* Internet access for package installation.
 
-## VM 1 - Wazuh All-in-One Server
+## VM 1, Wazuh All in One Server
 
-Install the Wazuh All-in-One deployment using the official quickstart method:
+Install the Wazuh All in One deployment using the official quickstart method:
 
 ```bash
-curl -sO https://packages.wazuh.com/4.7/wazuh-install.sh
+curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
 sudo bash wazuh-install.sh -a
 ```
 
@@ -26,35 +26,38 @@ sudo systemctl status wazuh-indexer
 sudo systemctl status wazuh-dashboard
 ```
 
-## VM 2 - Wazuh Agent
+## VM 2, Wazuh Agent
 
-Install the Wazuh Agent on the second VM. Replace `MANAGER_IP` with the IP address of VM 1:
-
-```bash
-curl -sO https://packages.wazuh.com/4.7/wazuh-install.sh
-sudo WAZUH_MANAGER="MANAGER_IP" bash wazuh-install.sh -a -t agent
-```
-
-Or install manually:
+Install the Wazuh Agent on the second VM. The `wazuh-install.sh` script used above deploys
+the server components and does not install agents, so use the repository instead and pass
+the manager address through `WAZUH_MANAGER` at install time. That variable is written into
+`ossec.conf` for you, which avoids editing the file afterwards.
 
 ```bash
-curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | sudo gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" | sudo tee /etc/apt/sources.list.d/wazuh.list
 sudo apt update
-sudo apt install wazuh-agent -y
+sudo WAZUH_MANAGER="<MANAGER_IP>" WAZUH_AGENT_NAME="<AGENT_NAME>" apt install wazuh-agent -y
 ```
 
-Configure the agent to point to the manager:
+If the agent was installed without those variables, set the manager address by editing the
+`<address>` element rather than by a blind substitution:
 
 ```bash
-sudo sed -i 's/MANAGER_IP/YOUR_MANAGER_IP/' /var/ossec/etc/ossec.conf
+sudo sed -i 's|<address>MANAGER_IP</address>|<address><MANAGER_IP></address>|' /var/ossec/etc/ossec.conf
+```
+
+Then enable and start it:
+
+```bash
+sudo systemctl daemon-reload
 sudo systemctl enable wazuh-agent
 sudo systemctl start wazuh-agent
 ```
 
 Verify the agent appears in the Wazuh Dashboard under **Agents**.
 
-## VM 2 - pmacctd
+## VM 2, pmacctd
 
 Install pmacctd from the pmacct package:
 
@@ -82,7 +85,7 @@ Start pmacctd:
 sudo pmacctd -f /etc/pmacct/pmacctd.conf -D
 ```
 
-## VM 2 - Python Normalization Script
+## VM 2, Python Normalization Script
 
 Ensure Python 3 is installed:
 
@@ -112,14 +115,18 @@ sudo crontab -e
 * * * * * /usr/bin/python3 /opt/netflow/normalize_netflow_to_wazuh.py
 ```
 
-## VM 1 - Custom Decoder and Rules
+## VM 1, Rules
 
-Copy the decoder and rules to the Wazuh Manager:
+Copy the rules to the Wazuh Manager:
 
 ```bash
-sudo cp rules/decoders/netflow_decoder.xml /var/ossec/etc/decoders/netflow_decoder.xml
-sudo cp rules/rules/netflow_rules.xml /var/ossec/etc/rules/netflow_rules.xml
+sudo cp wazuh_ruleset/rules/netflow_rules.xml /var/ossec/etc/rules/netflow_rules.xml
 ```
+
+The decoder file is optional. Events are decoded by the built in JSON decoder, which is what
+`<decoded_as>json</decoded_as>` in rule 117001 refers to. Installing
+`wazuh_ruleset/decoders/netflow_decoder.xml` gives the events a different decoder name, and
+rule 117001 then stops matching, so leave it out unless you also change that condition.
 
 Restart the Wazuh Manager to load the new decoder and rules:
 
