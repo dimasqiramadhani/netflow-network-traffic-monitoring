@@ -1,5 +1,3 @@
-![Cover Image](screenshots/Cover_Image.png)
-
 # NetFlow Integration for Network Visibility and Detection Engineering
 
 Network flow visibility integrated into Wazuh SIEM using pmacctd, Python log normalization, and 24 detection rules, built on a two VM architecture and validated against real internet traffic.
